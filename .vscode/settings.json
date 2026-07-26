@@ -10,6 +10,10 @@
   "notebook.formatOnSave.enabled": true,
   "cSpell.words": [
     "AntonKorznikov",
+    "ipykernel",
+    "ipynb",
+    "mypy",
+    "pyarrow",
     "sdpa"
   ]
 }
