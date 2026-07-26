@@ -1,0 +1,15 @@
+{
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "[markdown]": {
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": null
+  },
+  "editor.formatOnSave": true,
+  "notebook.formatOnSave.enabled": true,
+  "cSpell.words": [
+    "AntonKorznikov",
+    "sdpa"
+  ]
+}
