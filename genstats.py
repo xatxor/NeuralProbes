@@ -251,6 +251,7 @@ def main(args: Namespace) -> None:
     groups = len(pairs) * 4
     sums = torch.zeros(len(layers), groups, hidden, dtype=torch.float32, device="cuda")
     corpus_sum = torch.zeros(len(layers), hidden, dtype=torch.float32, device="cuda")
+    moments = torch.zeros(2, len(layers), hidden, hidden, dtype=torch.float64, device="cuda")
     counts = torch.zeros(groups, dtype=torch.int64, device="cuda")
     tokens = torch.zeros(groups, dtype=torch.float64, device="cuda")
     hits = torch.zeros(groups, dtype=torch.float64, device="cuda")
@@ -285,6 +286,9 @@ def main(args: Namespace) -> None:
             live, values = group[good], pooled[:, good, :]
             sums.index_add_(1, live, values)
             corpus_sum += values.sum(dim=1)
+            for fold in range(2):
+                chosen = values[:, live % 2 == fold, :].double()
+                moments[fold].baddbmm_(chosen.transpose(1, 2), chosen)
             counts += torch.bincount(live, minlength=groups)
             tokens += torch.bincount(live, weights=batch["length"].cuda()[good].double(), minlength=groups)
             hits += torch.bincount(live, weights=batch["label_hit"].cuda()[good].double(), minlength=groups)
@@ -314,6 +318,7 @@ def main(args: Namespace) -> None:
         {
             "sums": sums.reshape(len(layers), len(pairs), 2, 2, hidden).cpu().numpy(),
             "corpus_sum": corpus_sum.cpu().numpy(),
+            "moments": moments.cpu().numpy(),
             "counts": counts.reshape(len(pairs), 2, 2).cpu().numpy(),
             "tokens": tokens.cpu().numpy(),
             "hits": hits.cpu().numpy(),
@@ -336,6 +341,7 @@ def main(args: Namespace) -> None:
                     "n_pairs": len(pairs),
                     "axes": {
                         "sums": ["layer", "pair", "side", "fold", "hidden"],
+                        "moments": ["fold", "layer", "hidden", "hidden"],
                         "sides": ["concept", "antagonist"],
                     },
                     "summary": summary,
