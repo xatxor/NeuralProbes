@@ -10,11 +10,31 @@
   "notebook.formatOnSave.enabled": true,
   "cSpell.words": [
     "AntonKorznikov",
+    "apologise",
+    "ascontiguousarray",
+    "authorised",
     "baddbmm",
+    "behaviour",
+    "behaviours",
+    "binomtest",
+    "cudnn",
     "ipykernel",
     "ipynb",
+    "JBATCH",
+    "judgements",
+    "Llayer",
     "mypy",
+    "neighbour",
+    "neighbours",
+    "pvalue",
     "pyarrow",
-    "sdpa"
+    "pyproject",
+    "quantise",
+    "rint",
+    "sdpa",
+    "tmpfs",
+    "tobytes",
+    "uncentred",
+    "unsteered"
   ]
 }
