@@ -39,6 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--worker-index", type=int, default=None, help=argparse.SUPPRESS)
     parser.add_argument("--concept-analysis", action="store_true", help="Score reasoning tokens against Qwen3 concept vectors.")
     parser.add_argument("--highlights-per-sign", type=int, default=3)
+    parser.add_argument("--concept-pairs", default=None, help="Comma-separated concept pair IDs; default scores all 1036 pairs.")
     args = parser.parse_args()
     if args.num_workers < 1:
         parser.error("--num-workers must be at least 1")
@@ -46,6 +47,15 @@ def parse_args() -> argparse.Namespace:
         parser.error("--worker-index must be in [0, num-workers)")
     if args.highlights_per_sign < 1:
         parser.error("--highlights-per-sign must be at least 1")
+    if args.concept_pairs is not None:
+        try:
+            args.concept_pair_ids = sorted({int(value) for value in args.concept_pairs.split(",") if value.strip()})
+        except ValueError as error:
+            parser.error(f"--concept-pairs must contain integer IDs: {error}")
+        if not args.concept_pair_ids or min(args.concept_pair_ids) < 0 or max(args.concept_pair_ids) >= 1036:
+            parser.error("--concept-pairs IDs must be between 0 and 1035")
+    else:
+        args.concept_pair_ids = list(range(1036))
     return args
 
 
@@ -188,6 +198,7 @@ def matching_records(
     examples: list[dict[str, Any]],
     records: list[dict[str, Any]],
     require_analysis: bool = False,
+    concept_pair_ids: list[int] | None = None,
 ) -> list[dict[str, Any]]:
     expected_fingerprints = {
         example["id"]: prompt_fingerprint(name, example) for example in examples
@@ -200,6 +211,7 @@ def matching_records(
             and record.get("prompt_sha256") == expected
             and record.get("model") == MODEL_ID
             and (not require_analysis or record.get("concept_analysis_version") == ANALYSIS_VERSION)
+            and (not require_analysis or record.get("concept_pair_ids") == concept_pair_ids)
         ):
             records_by_id[record["id"]] = record
     return [records_by_id[example["id"]] for example in examples if example["id"] in records_by_id]
@@ -236,11 +248,11 @@ def run(name: str, model: Any, tokenizer: Any, args: argparse.Namespace) -> None
         examples = examples[args.worker_index :: args.num_workers]
     completed = {
         row["id"]
-        for row in matching_records(name, examples, read_records(path), require_analysis=args.concept_analysis)
+        for row in matching_records(name, examples, read_records(path), require_analysis=args.concept_analysis, concept_pair_ids=args.concept_pair_ids)
     }
     worker_label = f"worker {args.worker_index}" if args.worker_index is not None else "worker 0"
     scorer = (
-        ConceptScorer(model, tokenizer, model.device, args.highlights_per_sign)
+        ConceptScorer(model, tokenizer, model.device, args.highlights_per_sign, args.concept_pair_ids)
         if args.concept_analysis
         else None
     )
@@ -270,6 +282,7 @@ def run(name: str, model: Any, tokenizer: Any, args: argparse.Namespace) -> None
                 record.update(
                     {
                         "concept_analysis_version": ANALYSIS_VERSION,
+                        "concept_pair_ids": args.concept_pair_ids,
                         "reasoning_token_count": analysis.reasoning_token_count,
                         "reasoning_status": analysis.reasoning_status,
                         "reasoning_tokens": analysis.tokens,
@@ -318,7 +331,7 @@ def worker_command(args: argparse.Namespace, worker_index: int) -> list[str]:
     if args.limit is not None:
         command.extend(["--limit", str(args.limit)])
     if args.concept_analysis:
-        command.extend(["--concept-analysis", "--highlights-per-sign", str(args.highlights_per_sign)])
+        command.extend(["--concept-analysis", "--highlights-per-sign", str(args.highlights_per_sign), "--concept-pairs", ",".join(map(str, args.concept_pair_ids))])
     return command
 
 
@@ -335,7 +348,7 @@ def seed_missing_shards(args: argparse.Namespace) -> None:
         worker_for_id = {
             example["id"]: position % args.num_workers for position, example in enumerate(examples)
         }
-        compatible_records = matching_records(name, examples, canonical_records, require_analysis=args.concept_analysis)
+        compatible_records = matching_records(name, examples, canonical_records, require_analysis=args.concept_analysis, concept_pair_ids=args.concept_pair_ids)
         for worker_index in range(args.num_workers):
             shard_args = argparse.Namespace(**{**vars(args), "worker_index": worker_index})
             shard = result_path(name, shard_args)
@@ -359,7 +372,7 @@ def merge_shards(name: str, args: argparse.Namespace, wall_seconds: float) -> di
         worker_examples = examples[worker_index :: args.num_workers]
         shard_args = argparse.Namespace(**{**vars(args), "worker_index": worker_index})
         shard_records = read_records(result_path(name, shard_args))
-        for record in matching_records(name, worker_examples, shard_records, require_analysis=args.concept_analysis):
+        for record in matching_records(name, worker_examples, shard_records, require_analysis=args.concept_analysis, concept_pair_ids=args.concept_pair_ids):
             records_by_id[record["id"]] = record
     missing = [example_id for example_id in expected_ids if example_id not in records_by_id]
     if missing:
@@ -378,7 +391,7 @@ def merge_analysis_files(name: str, args: argparse.Namespace) -> None:
     """Concatenate worker parquet row groups without loading the analysis into RAM."""
     import pyarrow.parquet as pq
 
-    for stem in ("concept_scores", "token_highlights", "selected_token_activations"):
+    for stem in ("concept_scores", "token_highlights", "token_cosines"):
         sources = [
             RESULTS / f"{stem}-{name}.worker-{worker:02d}-of-{args.num_workers:02d}.parquet"
             for worker in range(args.num_workers)

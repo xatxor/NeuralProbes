@@ -5,7 +5,7 @@
 body{font:14px system-ui,sans-serif;margin:24px;max-width:1500px;color:#1f2937}select{max-width:560px;margin:4px;padding:4px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.trace{line-height:2.1;white-space:pre-wrap;border:1px solid #ddd;padding:12px;min-height:120px}.tok{padding:2px 0;border-radius:2px}.meta{color:#4b5563}.bar{margin:12px 0}h3{margin-bottom:4px}
 </style>
 <h1>Qwen3-8B reasoning concept activations</h1>
-<p class="meta">The selector contains the three highest and three lowest mean reasoning-token cosines for the selected method and layer. Each list value is that concept's mean activation across the full reasoning trace. Red is positive; blue is negative.</p>
+<p class="meta">All requested concepts are ranked by mean cosine across the full reasoning trace for the selected method and layer. Every displayed concept has a saved activation for every reasoning token. Red is positive; blue is negative.</p>
 <div class="bar"><label>Response <select id="response"></select></label><label> Layer <select id="layer"></select></label><label> Method <select id="method"></select></label><label> Concept <select id="pair"></select></label></div>
 <div id="meta" class="meta"></div><div id="traces"></div>
 <h2>Correlation with correctness</h2><div id="corr" class="meta"></div>

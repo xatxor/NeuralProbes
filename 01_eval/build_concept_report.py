@@ -60,11 +60,9 @@ def write_viewer(results: Path, response_rows: list[dict], scores: pd.DataFrame,
         response_scores = scores[(scores.benchmark == row["benchmark"]) & (scores.id.astype(str) == str(row["id"]))]
         rankings = {}
         for (method, layer), group in response_scores.groupby(["method", "layer"]):
-            positive = group.nlargest(3, "mean_cosine")[["pair", "mean_cosine"]].rename(columns={"mean_cosine": "activation"})
-            positive["direction"] = "positive"
-            negative = group.nsmallest(3, "mean_cosine")[["pair", "mean_cosine"]].rename(columns={"mean_cosine": "activation"})
-            negative["direction"] = "negative"
-            rankings[f"{method}:{layer}"] = pd.concat([positive, negative]).drop_duplicates("pair").to_dict("records")
+            ranked = group.sort_values("mean_cosine", ascending=False)[["pair", "mean_cosine"]].rename(columns={"mean_cosine": "activation"})
+            ranked["direction"] = ranked["activation"].map(lambda value: "positive" if value >= 0 else "negative")
+            rankings[f"{method}:{layer}"] = ranked.to_dict("records")
         (viewer / f"{key}.json").write_text(json.dumps({"tokens": row["reasoning_tokens"], "color_scales": row.get("activation_color_scales", {}), "rankings": rankings, "activations": subset.to_dict("records")}, ensure_ascii=False))
         index["responses"].append({"key": key, "benchmark": row["benchmark"], "id": str(row["id"]), "correct": row.get("correct"), "reasoning_status": row.get("reasoning_status")})
     (viewer / "index.json").write_text(json.dumps(index, ensure_ascii=False))
@@ -90,9 +88,9 @@ def main() -> None:
     highlight_files = [args.results / f"token_highlights-{benchmark}.parquet" for benchmark in BENCHMARKS]
     highlights = pd.concat([pd.read_parquet(path) for path in highlight_files if path.exists()], ignore_index=True)
     highlights.to_parquet(args.results / "token_highlights.parquet", index=False)
-    selected_files = [args.results / f"selected_token_activations-{benchmark}.parquet" for benchmark in BENCHMARKS]
+    selected_files = [args.results / f"token_cosines-{benchmark}.parquet" for benchmark in BENCHMARKS]
     selected = pd.concat([pd.read_parquet(path) for path in selected_files if path.exists()], ignore_index=True)
-    selected.to_parquet(args.results / "selected_token_activations.parquet", index=False)
+    selected.to_parquet(args.results / "token_cosines.parquet", index=False)
     write_viewer(args.results, response_rows, scores, selected, pairs, correlations_table)
     print(f"Wrote {args.results / 'correlations.parquet'} and {args.results / 'concept_viewer' / 'index.html'}")
 

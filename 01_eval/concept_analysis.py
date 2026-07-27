@@ -22,7 +22,7 @@ VECTOR_REPO = "josephofthebread/Qwen3-8B-concept-vectors"
 VECTOR_REVISION = "e15e1db9ca228c158aa4a372143922c8f66fb3c8"
 LAYERS = (11, 14, 18, 22, 25)
 METHODS = ("diff", "concept_centered", "antagonist_centered")
-VERSION = 2
+VERSION = 3
 
 
 def _download(name: str) -> str:
@@ -42,7 +42,7 @@ class AnalysisResult:
 class ConceptScorer:
     """Hooks requested residual streams and scores them without saving activations."""
 
-    def __init__(self, model: Any, tokenizer: Any, device: torch.device, highlights_per_sign: int = 3) -> None:
+    def __init__(self, model: Any, tokenizer: Any, device: torch.device, highlights_per_sign: int = 3, pair_ids: list[int] | None = None) -> None:
         self.model = model
         self.tokenizer = tokenizer
         self.device = device
@@ -50,6 +50,9 @@ class ConceptScorer:
         self.pairs = pd.read_parquet(_download("pairs.parquet"))
         if len(self.pairs) != 1036:
             raise ValueError(f"Expected 1036 concept pairs, found {len(self.pairs)}")
+        self.pair_ids = list(range(len(self.pairs))) if pair_ids is None else sorted(set(pair_ids))
+        if not self.pair_ids or min(self.pair_ids) < 0 or max(self.pair_ids) >= len(self.pairs):
+            raise ValueError("Concept pair IDs must be between 0 and 1035")
         self.vectors = self._load_vectors()
         self.captured: dict[int, list[torch.Tensor]] = {layer: [] for layer in LAYERS}
         self.handles: list[Any] = []
@@ -109,49 +112,43 @@ class ConceptScorer:
         positions = list(range(start, end))
         if not positions:
             return AnalysisResult(0, "empty_thinking", [], {}, [], [])
-        sums = {(method, layer): torch.zeros(len(self.pairs), device=self.device) for method in METHODS for layer in LAYERS}
-        mins = {(method, layer): torch.full((len(self.pairs),), float("inf"), device=self.device) for method in METHODS for layer in LAYERS}
-        maxs = {(method, layer): torch.full((len(self.pairs),), float("-inf"), device=self.device) for method in METHODS for layer in LAYERS}
+        n_pairs = len(self.pair_ids)
+        sums = {(method, layer): torch.zeros(n_pairs, device=self.device) for method in METHODS for layer in LAYERS}
+        mins = {(method, layer): torch.full((n_pairs,), float("inf"), device=self.device) for method in METHODS for layer in LAYERS}
+        maxs = {(method, layer): torch.full((n_pairs,), float("-inf"), device=self.device) for method in METHODS for layer in LAYERS}
         histograms = {(method, layer): torch.zeros(1024, dtype=torch.int64, device=self.device) for method in METHODS for layer in LAYERS}
         highlights: list[dict[str, Any]] = []
         for token_position in positions:
             for layer in LAYERS:
                 hidden = F.normalize(self.captured[layer][token_position].float(), dim=-1)
                 for method in METHODS:
-                    scores = hidden @ self.vectors[method, layer].T
+                    scores = hidden @ self.vectors[method, layer][self.pair_ids].T
                     key = method, layer
                     sums[key] += scores
                     mins[key] = torch.minimum(mins[key], scores)
                     maxs[key] = torch.maximum(maxs[key], scores)
                     histograms[key].scatter_add_(0, (scores.abs().clamp(0, 1) * 1023).long(), torch.ones_like(scores, dtype=torch.int64))
-                    rows_for_token = self._highlights(scores, benchmark, example_id, method, layer, token_position, token_ids[token_position])
+                    relative_position = token_position - start
+                    rows_for_token = self._highlights(scores, benchmark, example_id, method, layer, relative_position, token_ids[token_position])
                     if write_highlights is None:
                         highlights.extend(rows_for_token)
                     else:
                         write_highlights(rows_for_token)
+                    if write_selected is not None:
+                        write_selected([
+                            {"benchmark": benchmark, "id": example_id, "method": method, "layer": layer, "token_index": relative_position, "token": token_ids[token_position], "pair": pair, "cosine": value}
+                            for pair, value in zip(self.pair_ids, scores.cpu().tolist(), strict=True)
+                        ])
         rows = []
-        selected_pairs: dict[tuple[str, int], torch.Tensor] = {}
         for method in METHODS:
             for layer in LAYERS:
                 key = method, layer
                 means = (sums[key] / len(positions)).cpu().tolist()
                 mean_tensor = sums[key] / len(positions)
-                selected_pairs[key] = torch.cat((torch.topk(mean_tensor, 3).indices, torch.topk(-mean_tensor, 3).indices)).unique()
                 lo = mins[key].cpu().tolist()
                 hi = maxs[key].cpu().tolist()
-                for pair, mean, minimum, maximum in zip(range(len(self.pairs)), means, lo, hi, strict=True):
+                for pair, mean, minimum, maximum in zip(self.pair_ids, means, lo, hi, strict=True):
                     rows.append({"benchmark": benchmark, "id": example_id, "method": method, "layer": layer, "pair": pair, "mean_cosine": mean, "min_cosine": minimum, "max_cosine": maximum, "reasoning_tokens": len(positions)})
-        if write_selected is not None:
-            for token_position in positions:
-                for layer in LAYERS:
-                    hidden = F.normalize(self.captured[layer][token_position].float(), dim=-1)
-                    for method in METHODS:
-                        pair_ids = selected_pairs[method, layer]
-                        values = (hidden @ self.vectors[method, layer][pair_ids].T).cpu().tolist()
-                        write_selected([
-                            {"benchmark": benchmark, "id": example_id, "method": method, "layer": layer, "token_index": token_position, "token": token_ids[token_position], "pair": pair, "cosine": value}
-                            for pair, value in zip(pair_ids.cpu().tolist(), values, strict=True)
-                        ])
         scales = {}
         for key, histogram in histograms.items():
             target = math.ceil(histogram.sum().item() * 0.99)
@@ -173,7 +170,7 @@ class ConceptScorer:
         rows = []
         for polarity, values, ids in (("positive", positive, positive_ids), ("negative", -negative, negative_ids)):
             for value, pair in zip(values.cpu().tolist(), ids.cpu().tolist(), strict=True):
-                rows.append({"benchmark": benchmark, "id": example_id, "method": method, "layer": layer, "token_index": position, "token": token, "pair": pair, "cosine": value, "polarity": polarity})
+                rows.append({"benchmark": benchmark, "id": example_id, "method": method, "layer": layer, "token_index": position, "token": token, "pair": self.pair_ids[pair], "cosine": value, "polarity": polarity})
         return rows
 
 
@@ -224,7 +221,7 @@ class AnalysisWriter:
     def add_selected(self, rows: list[dict[str, Any]]) -> None:
         self.selected_buffer.extend(rows)
         if len(self.selected_buffer) >= 50_000:
-            self.selected_writer = self._write(self.selected_writer, self.root / f"selected_token_activations{self.suffix}.parquet", self.selected_buffer)
+            self.selected_writer = self._write(self.selected_writer, self.root / f"token_cosines{self.suffix}.parquet", self.selected_buffer)
             self.selected_buffer.clear()
 
     @staticmethod
@@ -244,7 +241,7 @@ class AnalysisWriter:
             self.highlight_writer = self._write(self.highlight_writer, self.root / f"token_highlights{self.suffix}.parquet", self.highlight_buffer)
             self.highlight_buffer.clear()
         if self.selected_buffer:
-            self.selected_writer = self._write(self.selected_writer, self.root / f"selected_token_activations{self.suffix}.parquet", self.selected_buffer)
+            self.selected_writer = self._write(self.selected_writer, self.root / f"token_cosines{self.suffix}.parquet", self.selected_buffer)
             self.selected_buffer.clear()
         for writer in (self.score_writer, self.highlight_writer, self.selected_writer):
             if writer is not None:
