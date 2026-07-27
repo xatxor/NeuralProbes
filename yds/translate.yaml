@@ -1,0 +1,27 @@
+name: NeuralProbes-translate
+desc: Russian names for the concept pairs and ontology classes
+args:
+  MODEL: "google/gemma-3-27b-it"
+  BATCH: "16"
+cmd: chmod +x translate.sh && ./translate.sh ${MODEL} ${BATCH}
+inputs:
+  - .bak/probes/pairs.parquet
+outputs:
+  - translations.json
+env:
+  docker:
+    image: docker.io/pytorch/pytorch:2.10.0-cuda12.6-cudnn9-runtime
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - TOKENIZERS_PARALLELISM: "false"
+    - HF_TOKEN
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements.txt
+    local-paths:
+      - translate.py
+      - yds/translate.sh
+cloud-instance-types:
+  - g2.1

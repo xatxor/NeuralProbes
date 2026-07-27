@@ -1,0 +1,23 @@
+name: NeuralProbes-stats-moments
+desc: Re-extract the sufficient statistics
+args:
+  SHARD: "0"
+  SHARDS: "10"
+cmd: python3 genstats.py --shard ${SHARD} --shards ${SHARDS} --out shard.safetensors
+outputs:
+  - shard.safetensors
+env:
+  docker:
+    image: docker.io/pytorch/pytorch:2.10.0-cuda12.6-cudnn9-runtime
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - TOKENIZERS_PARALLELISM: "false"
+    - HF_TOKEN
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements.txt
+    local-paths:
+      - genstats.py
+cloud-instance-types:
+  - g2.1

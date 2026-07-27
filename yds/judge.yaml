@@ -1,0 +1,32 @@
+name: NeuralProbes-screen-judge
+desc: Wave B, pairwise blinded judging of the plus/minus alpha pairs
+args:
+    SHARD: "0"
+    SHARDS: "10"
+    JBATCH: "16"
+    JUDGE: "google/gemma-3-27b-it"
+    MODE: "pairwise"
+    INDIR: "screen"
+cmd: chmod +x judgerun.sh && ./judgerun.sh ${SHARD} ${SHARDS} ${JBATCH} ${JUDGE} ${MODE} ${INDIR}
+inputs:
+    - screen/runs.jsonl
+    - screen/manifest.json
+outputs:
+    - labels.jsonl
+env:
+    docker:
+        image: docker.io/pytorch/pytorch:2.10.0-cuda12.6-cudnn9-runtime
+    vars:
+        - PIP_BREAK_SYSTEM_PACKAGES: "1"
+        - HF_HUB_DISABLE_XET: "1"
+        - TOKENIZERS_PARALLELISM: "false"
+        - HF_TOKEN
+    python:
+        type: manual
+        version: "3.12"
+        requirements-file: yds/requirements.txt
+        local-paths:
+            - judge.py
+            - yds/judgerun.sh
+cloud-instance-types:
+    - g2.1
