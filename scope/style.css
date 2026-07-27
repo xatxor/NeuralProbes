@@ -1,0 +1,337 @@
+:root {
+    --bg: #ffffff;
+    --fg: #16181d;
+    --muted: #5a616d;
+    --line: #d8dbe0;
+    --panel: #f4f5f7;
+    --accent: #2563eb;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0f1115;
+        --fg: #e6e8ec;
+        --muted: #9aa1ad;
+        --line: #2a2f39;
+        --panel: #171a21;
+        --accent: #7aa2ff;
+    }
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+}
+
+.titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+h1 { font-size: 16px; margin: 0; letter-spacing: 0.01em; }
+
+.language {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--muted);
+}
+h2 { font-size: 14.5px; margin: 0 0 4px; }
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.controls label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.controls label.wide { flex: 1 1 300px; }
+.controls label.grow { flex: 1 1 280px; }
+.controls label.grow select, .controls label.grow input { flex: 1; min-width: 0; }
+
+select, button, input[type="search"] {
+    font: inherit;
+    font-size: 13px;
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 4px 7px;
+}
+
+select { max-width: 60ch; }
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+input[type="search"]:focus, select:focus { outline: none; border-color: var(--accent); }
+input[type="range"] { padding: 0; flex: 1; min-width: 90px; }
+
+/* The top row finds a generation; the bottom row acts on the one that was found. The rule between them
+   is doing real work: without it the two rows read as one bank of dropdowns, and the filters look like
+   properties of the current sample rather than a way to search for another. */
+.divider {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 10px 0 2px;
+}
+
+main { flex: 1; display: flex; min-height: 0; }
+
+#panes { flex: 1; display: flex; min-width: 0; overflow: hidden; }
+
+.pane {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+    overflow: hidden;
+    border-right: 1px solid var(--line);
+}
+
+.pane.hidden { display: none; }
+.meta { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
+
+.stream {
+    flex: 1;
+    overflow-y: auto;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 14.5px;
+    line-height: 2.15;
+    word-break: break-word;
+}
+
+.tok {
+    padding: 2px 0;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: pre-wrap;
+    border-bottom: 2px solid transparent;
+}
+
+.tok:hover { border-bottom-color: var(--accent); }
+.tok.picked { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tok.special { color: var(--muted); font-style: italic; }
+.tok.response { font-weight: 500; }
+/* At high alpha the fill is dark enough that the theme's own text colour stops being legible on it. */
+.tok.strong { color: #ffffff; }
+
+#sidebar {
+    width: 400px;
+    flex: none;
+    border-left: 1px solid var(--line);
+    background: var(--panel);
+    padding: 12px 14px;
+    overflow-y: auto;
+}
+
+.hint { font-size: 12.5px; color: var(--muted); margin: 4px 0 10px; }
+
+.chosen {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 10px;
+    background: var(--bg);
+}
+
+.chosenhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+#chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    padding: 2px 4px 2px 8px;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+}
+
+.chip button {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    padding: 0 4px;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.chip button:hover { color: var(--fg); }
+
+.conceptsearch {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.conceptsearch input { flex: 1; min-width: 0; }
+
+#concepts { list-style: none; margin: 8px 0 0; padding: 0; }
+
+#concepts li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+}
+
+#concepts li .body { flex: 1; min-width: 0; cursor: pointer; }
+#concepts li input[type="checkbox"] { margin-top: 3px; flex: none; width: 15px; height: 15px; }
+#concepts li:hover { border-color: var(--accent); }
+#concepts li.active { border-color: var(--accent); background: rgba(56, 139, 253, 0.12); }
+#concepts li.dupe { opacity: 0.45; }
+
+.did {
+    float: right;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.did.strong { color: var(--accent); font-weight: 600; }
+.pole { font-size: 12.5px; color: var(--muted); }
+.klass { font-size: 11.5px; color: var(--muted); opacity: 0.85; }
+
+/* The bottom rail answers "what is happening at this token" and is rewritten on every click; the right
+   rail answers "what am I tracking across this text" and deliberately is not. Keeping them apart is the
+   whole point -- one panel serving both meant every click destroyed the list being picked from. */
+#tokenbar {
+    flex: none;
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+    padding: 8px 14px 10px;
+    max-height: 30vh;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.tokenhead {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.tokenhead h2 { margin: 0; }
+.tokenhead .hint { margin: 0; }
+
+.tokenlist {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+}
+
+.card {
+    flex: none;
+    width: 210px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 7px 9px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    cursor: pointer;
+    font: inherit;
+}
+
+.card:hover { border-color: var(--accent); }
+.card.active { border-color: var(--accent); background: rgba(56, 139, 253, 0.14); }
+.card.dupe { opacity: 0.45; }
+
+.cardz { font-family: ui-monospace, Menlo, monospace; font-size: 13px; font-weight: 600; }
+.cardz.up { color: #1f6feb; }
+.cardz.down { color: #cf222e; }
+.cardname { font-size: 13px; font-weight: 600; color: var(--fg); }
+.cardpole { font-size: 11.5px; color: var(--muted); }
+
+@media (prefers-color-scheme: dark) {
+    .cardz.up { color: #79c0ff; }
+    .cardz.down { color: #ff7b72; }
+}
+
+footer {
+    border-top: 1px solid var(--line);
+    padding: 6px 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.legend { display: flex; align-items: center; gap: 5px; }
+
+.swatch {
+    width: 24px;
+    height: 11px;
+    display: inline-block;
+    border-radius: 2px;
+    border: 1px solid var(--line);
+}
+
+.swatch.neg { background: rgba(248, 81, 73, 0.9); }
+.swatch.zero { background: transparent; }
+.swatch.pos { background: rgba(56, 139, 253, 0.9); }
+
+.hidden { display: none; }
+
+/* Token-bar filter. The concept list under a token is 1036 long, so it needs its own search rather
+   than being silently truncated. */
+#tokensearch {
+    flex: 1 1 22rem;
+    min-width: 12rem;
+    padding: 0.3rem 0.5rem;
+    font: inherit;
+    border: 1px solid var(--line, #444);
+    border-radius: 4px;
+    background: inherit;
+    color: inherit;
+}
+.tokenhead { flex-wrap: wrap; gap: 0.5rem; align-items: baseline; }
+#tokencount { opacity: 0.75; white-space: nowrap; }
+#tokenlist { max-height: 40vh; overflow-y: auto; }

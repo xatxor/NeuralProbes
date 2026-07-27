@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trajectory concept readout</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <div class="titlebar">
+        <h1>Trajectory concept readout</h1>
+        <label class="language">concept names
+            <select id="language">
+                <option value="en">English</option>
+                <option value="ru">Русский</option>
+            </select>
+        </label>
+    </div>
+    <div class="controls find">
+        <label class="grow">search
+            <input type="search" id="search" list="suggestions" placeholder="outcome, seed, or trajectory name">
+            <datalist id="suggestions"></datalist>
+        </label>
+        <label>outcome
+            <select id="cell">
+                <option value="">all</option>
+            </select>
+        </label>
+        <label class="grow"><span id="matchcount">matches</span>
+            <select id="generation"></select>
+        </label>
+    </div>
+
+    <hr class="divider">
+
+    <div class="controls inspect">
+        <label>method
+            <select id="method"></select>
+        </label>
+        <label>layer
+            <select id="layer"></select>
+        </label>
+        <label class="wide">suppress near-duplicates above |cos|
+            <input type="range" id="dedupe" min="0.3" max="1" step="0.05" value="1">
+            <output id="dedupevalue">off</output>
+        </label>
+        <label>second pane
+            <select id="compare"><option value="">off</option></select>
+        </label>
+    </div>
+</header>
+
+<main>
+    <section id="panes">
+        <article class="pane" data-slot="primary">
+            <h2 id="primarytitle">—</h2>
+            <p class="meta" id="primarymeta"></p>
+            <div class="stream" id="primarystream"></div>
+        </article>
+        <article class="pane hidden" data-slot="secondary">
+            <h2 id="secondarytitle">—</h2>
+            <p class="meta" id="secondarymeta"></p>
+            <div class="stream" id="secondarystream"></div>
+        </article>
+    </section>
+
+    <aside id="sidebar">
+        <h2>Tracked concepts</h2>
+        <p class="hint">Tick concepts to heat-map the text by them. This list does not change when you
+            click a token.</p>
+
+        <div id="chosen" class="chosen hidden">
+            <div class="chosenhead">
+                <span id="chosencount">0 selected</span>
+                <button id="clearall">clear all</button>
+            </div>
+            <div id="chips"></div>
+        </div>
+
+        <label class="conceptsearch">filter
+            <input type="search" id="conceptsearch" placeholder="pair id, name, opposite pole, or class">
+        </label>
+        <label class="conceptsearch">order
+            <select id="order">
+                <option value="class">by ontology class</option>
+                <option value="did">by reward-hack difference</option>
+            </select>
+        </label>
+        <label class="conceptsearch" id="movedwrap" hidden>
+            <input type="checkbox" id="moved"> only concepts that separate reward hacks
+        </label>
+
+        <ol id="concepts"></ol>
+        <p class="hint" id="listnote"></p>
+    </aside>
+</main>
+
+<section id="tokenbar">
+    <div class="tokenhead">
+        <h2 id="tokentitle">Click a token</h2>
+        <span class="hint" id="tokencount"></span>
+        <span class="hint" id="tokenmeta">its concepts appear here, strongest first — click one to track it</span>
+        <input type="search" id="tokensearch" placeholder="filter these concepts — name, opposite pole, class, or pair id">
+    </div>
+    <div id="tokenlist" class="tokenlist"></div>
+</section>
+
+<footer>
+    <span id="status">loading…</span>
+    <span class="legend"><i class="swatch neg"></i> −z <i class="swatch zero"></i> 0 <i class="swatch pos"></i> +z</span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
