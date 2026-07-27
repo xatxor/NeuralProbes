@@ -30,6 +30,42 @@ def load(path: Path) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
         return json.loads(handle.metadata()["manifest"]), {key: handle.get_tensor(key) for key in handle.keys()}
 
 
+def scatter(moment: np.ndarray, sums: np.ndarray, counts: np.ndarray) -> np.ndarray:
+    """Recover the pooled within-class covariance from a second moment and the group sums.
+
+    This is Proposition 2 of `$improve.tex`: with groups `g` of size `n_g` and sums `s_g`,
+    `Sw = (1/N) (M - sum_g s_g s_g^T / n_g)`. The group sums alone cannot give it -- a sum of
+    vectors says nothing about the sum of their outer products -- which is the whole reason `M` has
+    to be accumulated during the forward pass rather than derived from the shards afterwards.
+
+    Whitening by the *total* covariance instead would be a mistake: it decomposes as `Sw + Sb`, and
+    with 1036 concept pairs the between-group term is large, so it would penalise exactly the
+    directions that separate the poles.
+
+    :param moment: `sum_i x_i x_i^T` over the stories counted here, `[hidden, hidden]`.
+    :param sums: per-group sums over the same stories, `[group, hidden]`.
+    :param counts: stories per group, `[group]`; empty groups are dropped rather than divided by.
+
+    :return: the within-class covariance, `[hidden, hidden]`.
+    """
+    live = counts > 0
+    return (moment - (sums[live] / counts[live, None]).T @ sums[live]) / counts.sum()
+
+
+def fisher(direction: np.ndarray, delta: np.ndarray, within: np.ndarray) -> np.ndarray:
+    """Score directions by the Fisher criterion `(w.delta)^2 / (w.Sw.w)`, per concept pair.
+
+    :param direction: candidate directions, one per pair, `[pair, hidden]`.
+    :param delta: the contrast each direction is meant to detect, `[pair, hidden]`.
+    :param within: the within-class covariance the projection is measured against, `[hidden, hidden]`.
+
+    :return: the criterion per pair, `[pair]`; larger separates the poles better.
+    """
+    # As one three-operand einsum this contracts pair-by-pair against the full 4096-square matrix
+    # and runs orders of magnitude slower; going through the matmul first keeps it to one BLAS call.
+    return np.einsum("ph,ph->p", direction, delta) ** 2 / np.einsum("ph,ph->p", direction @ within, direction)
+
+
 def main(args: Namespace) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(message)s", datefmt="%H:%M:%S")
     load_dotenv()
@@ -43,6 +79,12 @@ def main(args: Namespace) -> None:
             raise SystemExit(f"{path} repeats shard {head['shard']}; the sums would be double counted")
         if manifest and head["config_hash"] != manifest["config_hash"]:
             raise SystemExit(f"{path} was produced by a different configuration; these are not summable")
+        if manifest and set(tensors) != set(totals):
+            raise SystemExit(
+                f"{path} disagrees with the other shards on {sorted(set(tensors) ^ set(totals))}; "
+                f"mixing shards from different script versions would leave those statistics "
+                f"covering only part of the corpus with no further warning"
+            )
         seen.add(head["shard"])
         manifest = manifest or head
         for key, value in tensors.items():
@@ -81,6 +123,51 @@ def main(args: Namespace) -> None:
         "concept_centered": (mu[:, :, 0] - grand[:, None, :]).astype(np.float32),
         "antagonist_centered": (mu[:, :, 1] - grand[:, None, :]).astype(np.float32),
     }
+
+    if "moments" in totals:
+        # Shipped vectors use every story; the honest comparison below never does. One layer at a
+        # time: the second moment is [2, layers, 4096, 4096] float64, and materialising more than a
+        # couple of 4096-square matrices at once will not fit alongside the sums.
+        flat = totals["sums"].reshape(len(layers), pairs_n * 2, 2, hidden)
+        counts_flat = totals["counts"].reshape(pairs_n * 2, 2)
+        whitened, verdict = np.empty_like(vectors["diff"]), []
+        for position, layer in enumerate(layers):
+            pooled = scatter(
+                totals["moments"][:, position].sum(axis=0),
+                flat[position].sum(axis=1),
+                counts_flat.sum(axis=1),
+            )
+            ridge = args.shrinkage * np.trace(pooled) / hidden
+            whitened[position] = np.linalg.solve(pooled + ridge * np.eye(hidden), vectors["diff"][position].T).T
+
+            # Fit on one fold and score on the other, with both the contrast and the covariance
+            # taken from the fitting fold only. $improve.tex §sec:verify pools Sw across folds and
+            # calls the leak out; the per-fold moments remove it entirely.
+            for fold in (0, 1):
+                within = scatter(totals["moments"][fold, position], flat[position, :, fold], counts_flat[:, fold])
+                held = scatter(
+                    totals["moments"][1 - fold, position], flat[position, :, 1 - fold], counts_flat[:, 1 - fold]
+                )
+                fit = mu_fold[position, :, 0, fold] - mu_fold[position, :, 1, fold]
+                test = mu_fold[position, :, 0, 1 - fold] - mu_fold[position, :, 1, 1 - fold]
+                candidate = np.linalg.solve(
+                    within + args.shrinkage * np.trace(within) / hidden * np.eye(hidden), fit.T
+                ).T
+                scored, baseline = fisher(candidate, test, held), fisher(fit, test, held)
+                verdict.append(
+                    {
+                        "layer": layer,
+                        "fit_fold": fold,
+                        "wins": float((scored > baseline).mean()),
+                        "median_ratio": float(np.median(scored / baseline)),
+                    }
+                )
+            log.info(
+                f"L{layer:02d}: whitened beats diff out of sample on "
+                f"{100 * np.mean([v['wins'] for v in verdict[-2:]]):.1f}% of pairs, "
+                f"median J ratio {np.mean([v['median_ratio'] for v in verdict[-2:]]):.2f}x"
+            )
+        vectors["lda"] = whitened.astype(np.float32)
 
     halves = mu_fold[:, :, 0] - mu_fold[:, :, 1]
     reliability = np.einsum("lpd,lpd->lp", halves[:, :, 0], halves[:, :, 1]) / (
@@ -253,4 +340,11 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("inputs", nargs="+", type=Path, help="shard files written by genstats.py")
     parser.add_argument("--out", type=Path, required=True, help="directory to write the vectors into")
+    parser.add_argument(
+        "--shrinkage",
+        type=float,
+        default=0.05,
+        help="ridge fraction blended into the within-class covariance before inverting it; the "
+        "effective-sample-size argument for whitening only holds post-shrinkage",
+    )
     main(parser.parse_args())
