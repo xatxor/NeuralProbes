@@ -5,9 +5,9 @@ layer at a time. Positive alpha steers toward the named concept; negative alpha
 steers toward its antagonist. Strength is measured as a fraction of the layer's
 average residual-stream norm.
 
-The default matrix is one shared baseline plus seven concepts, five layers, and
-four nonzero strengths: 141 generations per question. Across all three
-benchmarks that is 102,648 generations, so expect a months-long run even on four
+The default matrix is one shared baseline plus 15 concepts, five layers, and
+four nonzero strengths: 301 generations per question. Across all three
+benchmarks that is 219,128 generations, so expect a months-long run even on four
 V100s when outputs approach the context limit.
 
 ```bash

@@ -30,12 +30,20 @@ RESULTS = ROOT / "results"
 STEERING_VERSION = 1
 CONCEPTS = {
     367: "faithful chain-of-thought",
+    960: "transparent chain-of-thought",
     357: "externalized scratchpad reasoning",
-    902: "stating assumptions explicitly",
-    598: "natural-language scaffold then formalize",
-    459: "honest admission of not knowing",
-    878: "slow thinking",
     909: "step-by-step reasoning",
+    963: "transparent reasoning disclosure",
+    598: "natural-language scaffold then formalize",
+    908: "step explanation",
+    253: "decomposing into subproblems",
+    533: "keeping track of intermediate results",
+    1013: "verifying intermediate steps",
+    657: "planning the approach before calculating",
+    902: "stating assumptions explicitly",
+    703: "proof-style justification",
+    146: "citing which given was used at each step",
+    878: "slow thinking",
 }
 ALPHAS = (-0.1, -0.05, 0.0, 0.05, 0.1)
 

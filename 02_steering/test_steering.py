@@ -18,7 +18,7 @@ from summarize import plot_results, summarize
 
 def main() -> None:
     conditions = condition_specs(list(CONCEPTS), list(LAYERS), list(ALPHAS))
-    assert len(conditions) == 141
+    assert len(conditions) == 301
     assert sum(row["alpha"] == 0 for row in conditions) == 1
     assert all(
         row["alpha"] == 0 or (row["pair"] is not None and row["layer"] is not None)
