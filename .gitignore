@@ -15,6 +15,7 @@ yarn-error.log
 .setup_complete
 .mnist_cache
 .artifacts
+artifacts/
 .uv-cache
 .venv
 __pycache__
