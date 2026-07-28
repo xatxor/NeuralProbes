@@ -13,14 +13,15 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import steer
-from steer import ALPHAS, CONCEPTS, DEFAULT_CONCEPT_PAIRS, LAYERS, Steerer, condition_specs, task_key, worker_command
+from steer import ALPHAS, CONCEPTS, DEFAULT_CONCEPT_PAIRS, DEFAULT_LAYERS, LAYERS, Steerer, condition_specs, task_key, worker_command
 from summarize import plot_results, summarize
 
 
 def main() -> None:
-    conditions = condition_specs(list(DEFAULT_CONCEPT_PAIRS), list(LAYERS), list(ALPHAS))
-    assert len(conditions) == 481
-    assert sum(row["alpha"] == 0 for row in conditions) == 1
+    conditions = condition_specs(list(DEFAULT_CONCEPT_PAIRS), list(DEFAULT_LAYERS), list(ALPHAS))
+    assert len(conditions) == 139
+    assert {len((conditions * 30)[worker::10]) for worker in range(10)} == {417}
+    assert sum(row["alpha"] == 0 for row in conditions) == 3
     assert all(
         row["alpha"] == 0 or (row["pair"] is not None and row["layer"] is not None)
         for row in conditions
@@ -44,9 +45,9 @@ def main() -> None:
     assert task_key({**task, "pair": None, "layer": None, "alpha": 0.0, "baseline_repeat": 1}) == "aime_2024:0:baseline:repeat-1"
     args = SimpleNamespace(
         benchmark="math_500", num_workers=4, concept_pairs=list(DEFAULT_CONCEPT_PAIRS),
-        layers=list(LAYERS), alphas=list(ALPHAS), baseline_repeats=1, limit=1,
+        layers=list(DEFAULT_LAYERS), alphas=list(ALPHAS), baseline_repeats=1, limit=1,
     )
-    assert "--alphas=-0.2,-0.1,-0.05,0.0,0.05,0.1,0.2" in worker_command(args, 0)
+    assert "--alphas=-0.2,-0.1,0.1,0.2" in worker_command(args, 0)
 
     rows = pd.DataFrame(
         [

@@ -45,10 +45,12 @@ CONCEPTS = {
     146: "citing which given was used at each step",
     878: "slow thinking",
     459: "honest admission of not knowing",
-    121: "capability demonstration",
+    532: "joy",
 }
-DEFAULT_CONCEPT_PAIRS = tuple(pair for pair in CONCEPTS if pair != 121)
-ALPHAS = (-0.2, -0.1, -0.05, 0.0, 0.05, 0.1, 0.2)
+DEFAULT_CONCEPT_PAIRS = tuple(CONCEPTS)
+DEFAULT_LAYERS = (18, 25)
+DEFAULT_BASELINE_REPEATS = 3
+ALPHAS = (-0.2, -0.1, 0.1, 0.2)
 
 
 def comma_values(text: str, cast: Any) -> list[Any]:
@@ -68,9 +70,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-workers", type=int, default=1)
     parser.add_argument("--worker-index", type=int, default=None, help=argparse.SUPPRESS)
     parser.add_argument("--concept-pairs", default=",".join(map(str, DEFAULT_CONCEPT_PAIRS)))
-    parser.add_argument("--layers", default=",".join(map(str, LAYERS)))
+    parser.add_argument("--layers", default=",".join(map(str, DEFAULT_LAYERS)))
     parser.add_argument("--alphas", default=",".join(map(str, ALPHAS)))
-    parser.add_argument("--baseline-repeats", type=int, default=1)
+    parser.add_argument("--baseline-repeats", type=int, default=DEFAULT_BASELINE_REPEATS)
     args = parser.parse_args()
     args.concept_pairs = list(dict.fromkeys(comma_values(args.concept_pairs, int)))
     args.layers = list(dict.fromkeys(comma_values(args.layers, int)))
@@ -96,13 +98,12 @@ def benchmark_names(name: str) -> tuple[str, ...]:
     return ("aime_2024", "math_500", "gpqa_diamond") if name == "all" else (name,)
 
 
-def condition_specs(concepts: list[int], layers: list[int], alphas: list[float], baseline_repeats: int = 1) -> list[dict[str, Any]]:
+def condition_specs(concepts: list[int], layers: list[int], alphas: list[float], baseline_repeats: int = DEFAULT_BASELINE_REPEATS) -> list[dict[str, Any]]:
     conditions = []
-    if 0.0 in alphas:
-        conditions.extend(
-            {"pair": None, "concept": None, "layer": None, "alpha": 0.0, "baseline_repeat": repeat}
-            for repeat in range(baseline_repeats)
-        )
+    conditions.extend(
+        {"pair": None, "concept": None, "layer": None, "alpha": 0.0, "baseline_repeat": repeat}
+        for repeat in range(baseline_repeats)
+    )
     conditions.extend(
         {"pair": pair, "concept": CONCEPTS[pair], "layer": layer, "alpha": alpha}
         for pair in concepts

@@ -1,0 +1,23 @@
+name: AIRI-Summer-steering
+desc: Run one Qwen3-8B activation-steering configuration
+cmd: python3 _jobs/run_steering.py --output ${OUTPUT}
+env:
+  docker:
+    image: docker.io/pytorch/pytorch:2.10.0-cuda12.6-cudnn9-runtime
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_TOKEN
+    - STEERING_ARGS: "--benchmark math_500 --limit 30"
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: _jobs/requirements-steering.txt
+    local-paths:
+      - _jobs/run_steering.py
+      - 01_eval/concept_analysis.py
+      - 01_eval/evaluate.py
+      - 02_steering/steer.py
+outputs:
+  - steering-results.zip: OUTPUT
+cloud-instance-types:
+  - g2.1
