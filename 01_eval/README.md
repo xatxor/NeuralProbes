@@ -28,6 +28,9 @@ The script writes one JSONL record per example as it runs, so rerunning the same
 # Smoke test
 uv run python 01_eval/evaluate.py --benchmark aime_2024 --limit 3
 
+# Smoke test with concept analysis
+uv run python 01_eval/evaluate.py --benchmark gpqa_diamond --limit 1 --concept-analysis
+
 # Run a single benchmark
 uv run python 01_eval/evaluate.py --benchmark math_500
 
