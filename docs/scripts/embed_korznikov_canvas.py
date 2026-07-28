@@ -15,10 +15,7 @@ REPO_ROOT = DOCS_ROOT.parent
 DEFAULT_BUNDLE = DOCS_ROOT / "data" / "korznikov_stories_bundle.json"
 DEFAULT_INDEX = REPO_ROOT / "01_eval/results/concept_viewer/index.json"
 DEFAULT_CANVAS = DOCS_ROOT / "canvases" / "korznikov-dataset.canvas.tsx"
-CURSOR_CANVAS = (
-    Path.home()
-    / ".cursor/projects/home-User18-airi-summer-project/canvases/korznikov-dataset.canvas.tsx"
-)
+CURSOR_CANVAS = Path.home() / ".cursor/projects/home-User18-airi-summer-project/canvases/korznikov-dataset.canvas.tsx"
 MARKER_START = "// EMBEDDED_KORZNIKOV_DATA_START"
 MARKER_END = "// EMBEDDED_KORZNIKOV_DATA_END"
 
@@ -89,8 +86,7 @@ def embed_stories(bundle: dict) -> dict[str, dict[str, dict[str, dict[str, list[
 def embed_block(bundle: dict, index_path: Path) -> str:
     if "class_name" not in bundle or "pairs" not in bundle:
         raise SystemExit(
-            "Bundle must contain one class. Export with:\n"
-            "  python docs/scripts/export_korznikov_stories_bundle.py"
+            "Bundle must contain one class. Export with:\n  python docs/scripts/export_korznikov_stories_bundle.py"
         )
 
     embedded_class = bundle["class_name"]
@@ -100,10 +96,7 @@ def embed_block(bundle: dict, index_path: Path) -> str:
     stories = embed_stories(bundle)
     classes = load_class_catalog(index_path)
 
-    guidance = {
-        (p["concept"], p["antagonist"]): p.get("narrative_guidance", "")
-        for p in bundle["pairs"]
-    }
+    guidance = {(p["concept"], p["antagonist"]): p.get("narrative_guidance", "") for p in bundle["pairs"]}
     for cls in classes:
         if cls["name"] == embedded_class:
             cls["pairs"] = [

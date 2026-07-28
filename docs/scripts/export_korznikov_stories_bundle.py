@@ -100,9 +100,7 @@ def main() -> None:
         class_pair_ids = {p["pair"] for p in index["pairs"]}
     else:
         allowed_classes = {args.class_name}
-        class_pair_ids = {
-            p["pair"] for p in index["pairs"] if p["class_name"] == args.class_name
-        }
+        class_pair_ids = {p["pair"] for p in index["pairs"] if p["class_name"] == args.class_name}
         if not class_pair_ids:
             raise SystemExit(f"No pairs found for class_name={args.class_name!r}")
 
@@ -140,9 +138,11 @@ def main() -> None:
             class_name,
             {"pairs": [], "stories": {}, "_seen": set()},
         )
-        class_bucket["stories"].setdefault(pid, {}).setdefault(genre, {}).setdefault(lang, {})[
-            variant
-        ] = [setup, concept_pole, antagonist_pole]
+        class_bucket["stories"].setdefault(pid, {}).setdefault(genre, {}).setdefault(lang, {})[variant] = [
+            setup,
+            concept_pole,
+            antagonist_pole,
+        ]
 
         if pid not in class_bucket["_seen"]:
             class_bucket["_seen"].add(pid)
