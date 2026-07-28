@@ -5,9 +5,9 @@ layer at a time. Positive alpha steers toward the named concept; negative alpha
 steers toward its antagonist. Strength is measured as a fraction of the layer's
 average residual-stream norm.
 
-The default matrix is one shared baseline plus 15 concepts, five layers, and
-four nonzero strengths: 301 generations per question. Across all three
-benchmarks that is 219,128 generations, so expect a months-long run even on four
+The default matrix is one shared baseline plus 16 concepts, five layers, and
+six nonzero strengths: 481 generations per question. Across all three
+benchmarks that is 350,168 generations, so expect a months-long run even on four
 V100s when outputs approach the context limit.
 
 ```bash
@@ -28,3 +28,7 @@ uv run python 02_steering/test_steering.py
 
 Results are appended under `02_steering/results/`. Re-running the same command
 resumes completed condition/question pairs.
+
+Use `--baseline-repeats 5` to record five alpha-zero generations; summaries use
+their per-question mean as the baseline. Pair `121` (`capability demonstration`)
+is an available non-CoT control vector.

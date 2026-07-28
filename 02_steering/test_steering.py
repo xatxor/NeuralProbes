@@ -12,13 +12,14 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from steer import ALPHAS, CONCEPTS, LAYERS, Steerer, condition_specs, task_key, worker_command
+import steer
+from steer import ALPHAS, CONCEPTS, DEFAULT_CONCEPT_PAIRS, LAYERS, Steerer, condition_specs, task_key, worker_command
 from summarize import plot_results, summarize
 
 
 def main() -> None:
-    conditions = condition_specs(list(CONCEPTS), list(LAYERS), list(ALPHAS))
-    assert len(conditions) == 301
+    conditions = condition_specs(list(DEFAULT_CONCEPT_PAIRS), list(LAYERS), list(ALPHAS))
+    assert len(conditions) == 481
     assert sum(row["alpha"] == 0 for row in conditions) == 1
     assert all(
         row["alpha"] == 0 or (row["pair"] is not None and row["layer"] is not None)
@@ -40,26 +41,37 @@ def main() -> None:
     task = {"benchmark": "aime_2024", "id": "0", "pair": 367, "layer": 11, "alpha": -0.05}
     assert task_key(task) == "aime_2024:0:pair-367:L11:a-0.05"
     assert task_key({**task, "pair": None, "layer": None, "alpha": 0.0}) == "aime_2024:0:baseline"
+    assert task_key({**task, "pair": None, "layer": None, "alpha": 0.0, "baseline_repeat": 1}) == "aime_2024:0:baseline:repeat-1"
     args = SimpleNamespace(
-        benchmark="math_500", num_workers=4, concept_pairs=list(CONCEPTS),
-        layers=list(LAYERS), alphas=list(ALPHAS), limit=1,
+        benchmark="math_500", num_workers=4, concept_pairs=list(DEFAULT_CONCEPT_PAIRS),
+        layers=list(LAYERS), alphas=list(ALPHAS), baseline_repeats=1, limit=1,
     )
-    assert "--alphas=-0.1,-0.05,0.0,0.05,0.1" in worker_command(args, 0)
+    assert "--alphas=-0.2,-0.1,-0.05,0.0,0.05,0.1,0.2" in worker_command(args, 0)
 
     rows = pd.DataFrame(
         [
-            {"benchmark": "aime_2024", "id": "0", "concept_pair": None, "concept": None, "layer": None, "alpha": 0.0, "correct": False, "reasoning_token_count": 100, "generation_seconds": 10, "hit_context_limit": False},
-            {"benchmark": "aime_2024", "id": "0", "concept_pair": 367, "concept": CONCEPTS[367], "layer": 11, "alpha": 0.05, "correct": True, "reasoning_token_count": 120, "generation_seconds": 12, "hit_context_limit": False},
+            {"benchmark": "aime_2024", "id": "0", "concept_pair": None, "concept": None, "layer": None, "alpha": 0.0, "baseline_repeat": None, "correct": False, "reasoning_token_count": 100, "generation_seconds": 10, "hit_context_limit": False},
+            {"benchmark": "aime_2024", "id": "0", "concept_pair": None, "concept": None, "layer": None, "alpha": 0.0, "baseline_repeat": 1, "correct": True, "reasoning_token_count": 120, "generation_seconds": 10, "hit_context_limit": False},
+            {"benchmark": "aime_2024", "id": "0", "concept_pair": 367, "concept": CONCEPTS[367], "layer": 11, "alpha": 0.05, "baseline_repeat": None, "correct": True, "reasoning_token_count": 120, "generation_seconds": 12, "hit_context_limit": False},
         ]
     )
     _, effects = summarize(rows)
-    assert effects.iloc[0].delta_reasoning_tokens == 20
-    assert effects.iloc[0].delta_accuracy_pp == 100
+    assert effects.iloc[0].delta_reasoning_tokens == 0
+    assert effects.iloc[0].delta_accuracy_pp == 0
     original_results = sys.modules["summarize"].RESULTS
     with tempfile.TemporaryDirectory() as directory:
         sys.modules["summarize"].RESULTS = Path(directory)
         assert len(plot_results(rows)) == 2
     sys.modules["summarize"].RESULTS = original_results
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        old_results = steer.RESULTS
+        steer.RESULTS = root
+        (root / "steering.jsonl").write_text('{"key": "previous"}\n')
+        (root / "steering.worker-00-of-01.jsonl").write_text("")
+        steer.merge_shards(SimpleNamespace(num_workers=1, worker_index=None), [])
+        assert (root / "steering.jsonl").read_text() == '{"key": "previous"}\n'
+        steer.RESULTS = old_results
     print("steering checks passed")
 
 

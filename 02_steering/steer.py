@@ -44,8 +44,11 @@ CONCEPTS = {
     703: "proof-style justification",
     146: "citing which given was used at each step",
     878: "slow thinking",
+    459: "honest admission of not knowing",
+    121: "capability demonstration",
 }
-ALPHAS = (-0.1, -0.05, 0.0, 0.05, 0.1)
+DEFAULT_CONCEPT_PAIRS = tuple(pair for pair in CONCEPTS if pair != 121)
+ALPHAS = (-0.2, -0.1, -0.05, 0.0, 0.05, 0.1, 0.2)
 
 
 def comma_values(text: str, cast: Any) -> list[Any]:
@@ -64,9 +67,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit", type=int)
     parser.add_argument("--num-workers", type=int, default=1)
     parser.add_argument("--worker-index", type=int, default=None, help=argparse.SUPPRESS)
-    parser.add_argument("--concept-pairs", default=",".join(map(str, CONCEPTS)))
+    parser.add_argument("--concept-pairs", default=",".join(map(str, DEFAULT_CONCEPT_PAIRS)))
     parser.add_argument("--layers", default=",".join(map(str, LAYERS)))
     parser.add_argument("--alphas", default=",".join(map(str, ALPHAS)))
+    parser.add_argument("--baseline-repeats", type=int, default=1)
     args = parser.parse_args()
     args.concept_pairs = list(dict.fromkeys(comma_values(args.concept_pairs, int)))
     args.layers = list(dict.fromkeys(comma_values(args.layers, int)))
@@ -75,6 +79,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--limit must be at least 1")
     if args.num_workers < 1:
         parser.error("--num-workers must be at least 1")
+    if args.baseline_repeats < 1:
+        parser.error("--baseline-repeats must be at least 1")
     if args.worker_index is not None and not 0 <= args.worker_index < args.num_workers:
         parser.error("--worker-index must be in [0, num-workers)")
     if not set(args.concept_pairs) <= set(CONCEPTS):
@@ -90,10 +96,13 @@ def benchmark_names(name: str) -> tuple[str, ...]:
     return ("aime_2024", "math_500", "gpqa_diamond") if name == "all" else (name,)
 
 
-def condition_specs(concepts: list[int], layers: list[int], alphas: list[float]) -> list[dict[str, Any]]:
+def condition_specs(concepts: list[int], layers: list[int], alphas: list[float], baseline_repeats: int = 1) -> list[dict[str, Any]]:
     conditions = []
     if 0.0 in alphas:
-        conditions.append({"pair": None, "concept": None, "layer": None, "alpha": 0.0})
+        conditions.extend(
+            {"pair": None, "concept": None, "layer": None, "alpha": 0.0, "baseline_repeat": repeat}
+            for repeat in range(baseline_repeats)
+        )
     conditions.extend(
         {"pair": pair, "concept": CONCEPTS[pair], "layer": layer, "alpha": alpha}
         for pair in concepts
@@ -105,7 +114,7 @@ def condition_specs(concepts: list[int], layers: list[int], alphas: list[float])
 
 
 def build_tasks(args: argparse.Namespace) -> list[dict[str, Any]]:
-    conditions = condition_specs(args.concept_pairs, args.layers, args.alphas)
+    conditions = condition_specs(args.concept_pairs, args.layers, args.alphas, args.baseline_repeats)
     tasks = []
     for benchmark in benchmark_names(args.benchmark):
         examples = load_benchmark(benchmark)
@@ -132,7 +141,8 @@ def alpha_label(alpha: float) -> str:
 
 def task_key(task: dict[str, Any]) -> str:
     if task["alpha"] == 0.0:
-        condition = "baseline"
+        repeat = task.get("baseline_repeat", 0)
+        condition = "baseline" if repeat == 0 else f"baseline:repeat-{repeat}"
     else:
         condition = f"pair-{task['pair']}:L{task['layer']}:a{alpha_label(task['alpha'])}"
     return f"{task['benchmark']}:{task['id']}:{condition}"
@@ -252,6 +262,7 @@ def generate(model: Any, tokenizer: Any, steerer: Steerer, task: dict[str, Any])
         "concept": task["concept"],
         "layer": task["layer"],
         "alpha": task["alpha"],
+        "baseline_repeat": task.get("baseline_repeat"),
         "prompt_sha256": prompt_hash(task),
         "output": text,
         "reference": task["answer"],
@@ -317,6 +328,8 @@ def worker_command(args: argparse.Namespace, worker: int) -> list[str]:
         "--layers",
         ",".join(map(str, args.layers)),
         f"--alphas={','.join(map(str, args.alphas))}",
+        "--baseline-repeats",
+        str(args.baseline_repeats),
     ]
     if args.limit is not None:
         command.extend(["--limit", str(args.limit)])
@@ -360,6 +373,12 @@ def merge_shards(args: argparse.Namespace, tasks: list[dict[str, Any]]) -> None:
     destination = RESULTS / "steering.jsonl"
     temporary = destination.with_suffix(".jsonl.tmp")
     with temporary.open("w", encoding="utf-8") as output:
+        if destination.exists():
+            with destination.open(encoding="utf-8") as source:
+                for line in source:
+                    record = json.loads(line)
+                    if record.get("key") not in tasks_by_key:
+                        output.write(line)
         for worker in range(args.num_workers):
             shard_args = argparse.Namespace(**{**vars(args), "worker_index": worker})
             with result_path(shard_args).open(encoding="utf-8") as source:
