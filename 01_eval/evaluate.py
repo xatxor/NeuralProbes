@@ -39,6 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--worker-index", type=int, default=None, help=argparse.SUPPRESS)
     parser.add_argument("--concept-analysis", action="store_true", help="Score reasoning tokens against Qwen3 concept vectors.")
     parser.add_argument("--highlights-per-sign", type=int, default=3)
+    parser.add_argument("--activation-chunk-size", type=int, default=128, help="Raw activation tokens retained on GPU before cosine scoring.")
     parser.add_argument("--concept-pairs", default=None, help="Comma-separated concept pair IDs; default scores all 1036 pairs.")
     args = parser.parse_args()
     if args.num_workers < 1:
@@ -47,6 +48,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--worker-index must be in [0, num-workers)")
     if args.highlights_per_sign < 1:
         parser.error("--highlights-per-sign must be at least 1")
+    if args.activation_chunk_size < 1:
+        parser.error("--activation-chunk-size must be at least 1")
     if args.concept_pairs is not None:
         try:
             args.concept_pair_ids = sorted({int(value) for value in args.concept_pairs.split(",") if value.strip()})
@@ -139,7 +142,6 @@ def generate(
     benchmark: str = "",
     example_id: str = "",
     highlight_sink: Any | None = None,
-    selected_sink: Any | None = None,
 ) -> tuple[str, Any | None]:
     messages = [{"role": "user", "content": prompt}]
     # Qwen3's native switch; do not omit it, even if the model defaults change.
@@ -148,17 +150,20 @@ def generate(
     # Let the model generate until it emits EOS. The architecture's context
     # window is the only upper bound, preventing positions the model cannot use.
     if scorer is not None:
-        scorer.begin()
+        scorer.begin(benchmark, example_id)
     try:
         output = model.generate(**inputs, max_length=model.config.max_position_embeddings, do_sample=False)
     except Exception:
         if scorer is not None:
-            for handle in scorer.handles:
-                handle.remove()
-            scorer.handles = []
+            scorer.cancel()
         raise
     continuation = output[0][inputs.input_ids.shape[1] :]
-    analysis = scorer.finish(continuation, benchmark, example_id, highlight_sink, selected_sink) if scorer is not None else None
+    try:
+        analysis = scorer.finish(continuation, benchmark, example_id, highlight_sink) if scorer is not None else None
+    except Exception:
+        if scorer is not None:
+            scorer.cancel()
+        raise
     return tokenizer.decode(continuation, skip_special_tokens=False), analysis
 
 
@@ -193,6 +198,22 @@ def prompt_fingerprint(name: str, example: dict[str, Any]) -> str:
     return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
 
 
+def trace_complete(benchmark: str, example_id: str, pair_ids: list[int]) -> bool:
+    root = RESULTS / "traces" / benchmark / str(example_id)
+    meta = root / "meta.json"
+    if not meta.exists():
+        return False
+    try:
+        data = json.loads(meta.read_text())
+    except json.JSONDecodeError:
+        return False
+    return data.get("pair_ids") == pair_ids and data.get("dtype") == "float16" and all(
+        (root / f"{method}-L{layer}.npy").exists()
+        for method in ("diff", "concept_centered", "antagonist_centered")
+        for layer in (11, 14, 18, 22, 25)
+    )
+
+
 def matching_records(
     name: str,
     examples: list[dict[str, Any]],
@@ -212,6 +233,8 @@ def matching_records(
             and record.get("model") == MODEL_ID
             and (not require_analysis or record.get("concept_analysis_version") == ANALYSIS_VERSION)
             and (not require_analysis or record.get("concept_pair_ids") == concept_pair_ids)
+            and (not require_analysis or record.get("activation_chunk_size") is not None)
+            and (not require_analysis or trace_complete(name, record["id"], concept_pair_ids or []))
         ):
             records_by_id[record["id"]] = record
     return [records_by_id[example["id"]] for example in examples if example["id"] in records_by_id]
@@ -233,6 +256,7 @@ def summarize(name: str, records: list[dict[str, Any]], wall_seconds: float) -> 
         "scored": len(scored),
         "accuracy": sum(scored) / len(scored) if scored else None,
         "generation_seconds": sum(row.get("generation_seconds", 0.0) for row in records),
+        "analysis_seconds": sum(row.get("analysis_seconds", 0.0) for row in records),
         "run_wall_seconds": wall_seconds,
     }
 
@@ -252,7 +276,7 @@ def run(name: str, model: Any, tokenizer: Any, args: argparse.Namespace) -> None
     }
     worker_label = f"worker {args.worker_index}" if args.worker_index is not None else "worker 0"
     scorer = (
-        ConceptScorer(model, tokenizer, model.device, args.highlights_per_sign, args.concept_pair_ids)
+        ConceptScorer(model, tokenizer, model.device, RESULTS / "traces", args.highlights_per_sign, args.concept_pair_ids, args.activation_chunk_size)
         if args.concept_analysis
         else None
     )
@@ -264,9 +288,11 @@ def run(name: str, model: Any, tokenizer: Any, args: argparse.Namespace) -> None
             formatted_prompt = instruction(name, example["prompt"])
             example_started = time.perf_counter()
             output, analysis = generate(
-                model, tokenizer, formatted_prompt, scorer, name, example["id"], writer.add_highlights if writer else None, writer.add_selected if writer else None
+                model, tokenizer, formatted_prompt, scorer, name, example["id"], writer.add_highlights if writer else None
             )
             generation_seconds = time.perf_counter() - example_started
+            if analysis is not None:
+                generation_seconds -= analysis.analysis_seconds
             record = {
                 "id": example["id"],
                 "model": MODEL_ID,
@@ -287,6 +313,9 @@ def run(name: str, model: Any, tokenizer: Any, args: argparse.Namespace) -> None
                         "reasoning_status": analysis.reasoning_status,
                         "reasoning_tokens": analysis.tokens,
                         "activation_color_scales": analysis.color_scales,
+                        "analysis_seconds": analysis.analysis_seconds,
+                        "trace_dtype": "float16",
+                        "activation_chunk_size": args.activation_chunk_size,
                     }
                 )
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -331,7 +360,7 @@ def worker_command(args: argparse.Namespace, worker_index: int) -> list[str]:
     if args.limit is not None:
         command.extend(["--limit", str(args.limit)])
     if args.concept_analysis:
-        command.extend(["--concept-analysis", "--highlights-per-sign", str(args.highlights_per_sign), "--concept-pairs", ",".join(map(str, args.concept_pair_ids))])
+        command.extend(["--concept-analysis", "--highlights-per-sign", str(args.highlights_per_sign), "--activation-chunk-size", str(args.activation_chunk_size), "--concept-pairs", ",".join(map(str, args.concept_pair_ids))])
     return command
 
 
@@ -391,7 +420,7 @@ def merge_analysis_files(name: str, args: argparse.Namespace) -> None:
     """Concatenate worker parquet row groups without loading the analysis into RAM."""
     import pyarrow.parquet as pq
 
-    for stem in ("concept_scores", "token_highlights", "token_cosines"):
+    for stem in ("concept_scores", "token_highlights"):
         sources = [
             RESULTS / f"{stem}-{name}.worker-{worker:02d}-of-{args.num_workers:02d}.parquet"
             for worker in range(args.num_workers)

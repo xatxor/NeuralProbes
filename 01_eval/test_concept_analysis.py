@@ -3,7 +3,9 @@
 import tempfile
 from pathlib import Path
 
-from concept_analysis import AnalysisResult, AnalysisWriter, thinking_span
+import torch
+
+from concept_analysis import AnalysisResult, AnalysisWriter, ConceptScorer, LAYERS, METHODS, thinking_span
 
 
 class Tokenizer:
@@ -20,6 +22,18 @@ def main() -> None:
         writer.close()
         assert (Path(directory) / "concept_scores-check.parquet").exists()
         assert (Path(directory) / "token_highlights-check.parquet").exists()
+    with tempfile.TemporaryDirectory() as directory:
+        scorer = object.__new__(ConceptScorer)
+        scorer.pair_ids = [0, 1]
+        scorer.captured_tokens = 0
+        scorer.captured = {layer: [torch.ones(4), torch.ones(4)] for layer in LAYERS}
+        scorer.combined_vectors = {layer: torch.ones(6, 4) for layer in LAYERS}
+        scorer.streams = {(method, layer): (Path(directory) / f"{method}-{layer}").open("wb") for method in METHODS for layer in LAYERS}
+        scorer._flush_captured()
+        scorer._close_streams()
+        assert scorer.captured_tokens == 2
+        assert all(not values for values in scorer.captured.values())
+        assert all((Path(directory) / f"{method}-{layer}").stat().st_size == 2 * 2 * 2 for method in METHODS for layer in LAYERS)
 
 
 if __name__ == "__main__":

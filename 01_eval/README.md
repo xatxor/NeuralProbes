@@ -42,14 +42,15 @@ concept pairs in `josephofthebread/Qwen3-8B-concept-vectors`. It uses only
 layers 11, 14, 18, 22, and 25, and writes aggregate cosine scores plus the
 three strongest positive and negative token highlights per method/layer.
 
-Use `--concept-pairs 12,74,985` to collect dense token-level cosine values only
-for selected pair IDs. Without that option, `token_cosines.parquet` contains
-every requested concept at every reasoning token, method, and layer.
+Use `--concept-pairs 12,74,985` to score only selected pair IDs. Dense token
+traces are stored as float16 NumPy matrices under
+`results/traces/{benchmark}/{id}/`, one file per method/layer; aggregate scores
+remain in Parquet.
 
 ```bash
 uv run python 01_eval/evaluate.py --benchmark all --num-workers 4 --concept-analysis
 uv run python 01_eval/build_concept_report.py
-cd 01_eval/results && python -m http.server
+python 01_eval/viewer_server.py --results 01_eval/results
 ```
 
 Open `http://localhost:8000/concept_viewer/`. The viewer compares `diff`,
