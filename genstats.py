@@ -176,20 +176,30 @@ def main(args: Namespace) -> None:
     log.info(f"layers: blocks {layers} of {depth} ({', '.join(args.layers)})")
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
-    rendered = tokenizer.apply_chat_template(
-        [{"role": "user", "content": "Write a short story."}],
-        tokenize=False,
-        add_generation_prompt=True,
-        enable_thinking=False,
-    )
-    prefix = tokenizer.encode(rendered, add_special_tokens=False)
-    suffix = tokenizer.encode(tokenizer.eos_token, add_special_tokens=False)
-    log.info(f"context: {len(prefix)} prefix + story + {len(suffix)} suffix tokens, prefix is {rendered!r}")
+    # No chat scaffolding. Every text used to be prefixed with "Write a short story.", which is
+    # wrong for most of this corpus: it is ten genres in equal tenths -- memo, news, diary, speech,
+    # case study, letter, dialogue, monologue, fable, third-person narrative -- across five languages
+    # in equal fifths, so the instruction misdescribed the genre for roughly 80% of rows and was in
+    # the wrong language for 80% of them. Both poles carried the same prefix, so most of its effect
+    # cancelled in the difference, but it put every activation in a state the model is never actually
+    # in, and that is not something to leave in place while asking why the directions fail to
+    # transfer.
+    #
+    # The suffix was `eos_token` and is dropped with it. It never mattered either way: attention is
+    # causal and every pooled position is a text token, all of which precede it.
+    #
+    # Dropping the prefix leaves the first text token without any context, which is harmless here
+    # because `--skip-tokens` already discards the leading 50 positions of every text.
+    prefix: list[int] = []
+    suffix: list[int] = []
+    log.info(f"context: raw text, no chat template, {args.skip_tokens} leading tokens skipped")
 
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     data = load_dataset("AntonKorznikov/feature_stories", split="train")
     data = data.shard(num_shards=args.shards, index=args.shard, contiguous=False)
-    log.info(f"shard {args.shard}/{args.shards}: {len(data)} rows after filtering")
+    # Nothing is filtered: every language and every genre goes in, as before. The message used to
+    # say "after filtering", which described a step that does not exist.
+    log.info(f"shard {args.shard}/{args.shards}: {len(data)} of {len(data) * args.shards} rows, unfiltered")
 
     data = data.map(
         explode,
@@ -335,7 +345,7 @@ def main(args: Namespace) -> None:
                     "n_model_layers": depth,
                     "layers": layers,
                     "dtype": str(dtype).removeprefix("torch."),
-                    "rendered_prefix": rendered,
+                    "rendered_prefix": "",
                     "shard": args.shard,
                     "shards": args.shards,
                     "n_pairs": len(pairs),
