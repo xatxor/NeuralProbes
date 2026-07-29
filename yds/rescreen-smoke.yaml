@@ -1,0 +1,34 @@
+name: NeuralProbes-rescreen-smoke
+desc: One two-hundredth of a layer, to prove the path and measure the reference norm before the wave
+args:
+  SHARD: "0"
+  SHARDS: "200"
+  LAYER: "18,25"
+  ALPHA: "0.5"
+  TOKENS: "192"
+  CHUNK: "32"
+  BASELINE: "1"
+cmd: chmod +x rescreen.sh && ./rescreen.sh ${SHARD} ${SHARDS} ${LAYER} ${ALPHA} ${TOKENS} ${CHUNK} ${BASELINE}
+inputs:
+  - prompts.json
+  - classes.json
+outputs:
+  - runs.jsonl
+  - manifest.json
+env:
+  docker:
+    image: docker.io/pytorch/pytorch:2.10.0-cuda12.6-cudnn9-runtime
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - HF_TOKEN
+    - HF_REPO
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements.txt
+    local-paths:
+      - rescreen.py
+      - yds/rescreen.sh
+cloud-instance-types:
+  - g2.1

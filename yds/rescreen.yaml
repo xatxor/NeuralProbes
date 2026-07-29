@@ -1,0 +1,36 @@
+name: NeuralProbes-rescreen
+desc: Steer every concept vector on prompts drawn from its own class, both layers in one pass
+args:
+  SHARD: "0"
+  SHARDS: "10"
+  LAYER: "18,25"
+  ALPHA: "0.5"
+  TOKENS: "192"
+  CHUNK: "32"
+  BASELINE: "1"
+cmd: chmod +x rescreen.sh && ./rescreen.sh ${SHARD} ${SHARDS} ${LAYER} ${ALPHA} ${TOKENS} ${CHUNK} ${BASELINE}
+inputs:
+  - prompts.json
+  - classes.json
+outputs:
+  - runs.jsonl
+  - manifest.json
+env:
+  docker:
+    image: docker.io/pytorch/pytorch:2.10.0-cuda12.6-cudnn9-runtime
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    # The vectors and pairs.parquet are fetched from the published repo rather than uploaded, so the
+    # job spec stays small; HF_REPO is what rescreen.py resolves them against.
+    - HF_TOKEN
+    - HF_REPO
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements.txt
+    local-paths:
+      - rescreen.py
+      - yds/rescreen.sh
+cloud-instance-types:
+  - g2.1
