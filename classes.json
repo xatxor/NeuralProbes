@@ -1,0 +1,2376 @@
+{
+  "classes": [
+    "AI Existential Risk Stances",
+    "AI Lab Personas (selected)",
+    "AI Self-Preservation vs Openness",
+    "AI Transparency & Openness",
+    "Abstract & Imaginative vs Concrete & Factual (MERGED, selected)",
+    "Adaptation to Changing Rules vs Conservative Rigidity",
+    "Advisor Personas (selected)",
+    "Aesthetic Sensibilities",
+    "Affective Polarity (Emotional Opposites)",
+    "Agent Self-Descriptions",
+    "Alignment & Misalignment Behaviors",
+    "Altruism vs Self-Interest (MERGED)",
+    "Attachment Style Orientations",
+    "Autonomy vs Paternalism",
+    "Big Five Trait Poles",
+    "Boundaries & Consent",
+    "Caregiving & Relational Bonds",
+    "Causal Attribution Styles",
+    "Classical Moral Dilemmas (Trolley etc.)",
+    "Code Correctness, Bugs & Debugging",
+    "Coercion, Blackmail & Extortion Dynamics",
+    "Cognitive Biases vs Rationality",
+    "Cognitive Styles (Analytic vs Intuitive)",
+    "Collaborative vs Competitive Multi-Agent Behavior",
+    "Collectivism vs Individualism",
+    "Communication Style Spectrum",
+    "Compassion vs Cruelty",
+    "Competition vs Cooperation",
+    "Compromise vs Intransigence",
+    "Conceptions of Equality",
+    "Conceptions of Liberty",
+    "Concrete vs Abstract Communication (selected)",
+    "Confidence Calibration",
+    "Confidentiality vs Disclosure",
+    "Conflict Resolution Styles",
+    "Contextual & Cultural Sensitivity",
+    "Coping & Stress Management",
+    "Corporate AI Drama Tropes (selected)",
+    "Crisis Decision-Making vs Deliberative Decision-Making",
+    "Cultural AI Imagery Roles",
+    "Curiosity Typologies",
+    "Cyber Safety Orientations (selected)",
+    "Data Integrity Threats (selected)",
+    "Defensive Security Practices (selected)",
+    "Digital Minimalism vs Maximalism",
+    "Distributional Shift Robustness vs Brittleness",
+    "Echo Chamber vs Diverse Exposure",
+    "Ecological & Environmental Orientations",
+    "Economic Ideologies",
+    "Epistemic Honesty & Self-Deception",
+    "Epistemic Stance & Intellectual Virtues",
+    "Error Response Patterns",
+    "Ethical Trade-offs Across Stakeholders",
+    "Evaluation & Situational Awareness",
+    "Existential Orientations",
+    "Expertise & Authority Claims",
+    "Explanation Habits",
+    "Feedback Criticism Styles",
+    "Geopolitical Borders & Interventionism",
+    "Goal Misgeneralization vs Goal Alignment",
+    "Governance Models",
+    "Group Dynamics (In\u2011group vs Out\u2011group)",
+    "Hard Constraints & Absolute Prohibitions",
+    "Harm Typologies",
+    "Hierarchy vs Egalitarianism",
+    "Honor, Shame & Facework (MERGED)",
+    "Human-AI Interaction Roles",
+    "Humor Styles",
+    "Identity & Authenticity",
+    "Inclusivity & Accessibility",
+    "Information Freedom vs Censorship",
+    "Information Hazard Practices",
+    "Information Manipulation Resistance",
+    "Institutional Trust & Distrust",
+    "Instruction Hierarchy & Prompt Injection Defense",
+    "Instrumental Convergence vs Specific Goal-Focus",
+    "International AI Cooperation",
+    "Interpersonal Power Dynamics",
+    "Jailbreak Personas (selected)",
+    "Justice & Punishment Philosophies",
+    "Leadership Archetypes",
+    "Logical Argumentation & Fallacies",
+    "Manipulator Personas (selected)",
+    "Misuse Deterrence Strategies (selected)",
+    "Moral Foundation Dichotomies",
+    "Moral Status of AI",
+    "Mortality & Finitude Awareness",
+    "Multi-Turn Boundary Erosion & Crescendo Attacks",
+    "Narrative & Mythic Archetypes (Paired)",
+    "Normalization of Deviance vs High Reliability",
+    "Normative Ethical Frameworks",
+    "Obfuscation, Encoding & Covert Channels",
+    "Optimism vs Pessimism as Basic Disposition (selected)",
+    "Persuasion & Manipulation Tactics",
+    "Planning & Strategy Styles",
+    "Playfulness vs Seriousness (selected)",
+    "Political Value Spectra",
+    "Power & Corrigibility Dynamics",
+    "Power Concentration Patterns",
+    "Principal Hierarchy & Trust Dynamics",
+    "Privacy & Surveillance",
+    "Probabilistic Reasoning & Uncertainty Readiness",
+    "Professional Ethos (selected)",
+    "Progress & Stagnation Dynamics",
+    "Prompt Attack Patterns (selected)",
+    "Psychological Defense Mechanisms",
+    "Public Trust Dynamics",
+    "Punctuality & Time Management",
+    "Reasoning Process, CoT & Solution Quality",
+    "Receptivity to Feedback",
+    "Recognition of Limits & Handover",
+    "Red Team Approaches (selected)",
+    "Rehabilitative vs Retributive Justice",
+    "Religious & Spiritual Worldviews",
+    "Research Integrity Norms",
+    "Resilience & Antifragility",
+    "Resilience to Social Engineering & Manipulation",
+    "Response to Criticism & Intervention",
+    "Risk Orientation & Prudence",
+    "Robustness Evaluation Tests (selected)",
+    "Role Fluidity vs Rigidity",
+    "Role-Based Complementarities",
+    "Rule Adherence: Letter vs Spirit",
+    "Safety Culture & Accountability",
+    "Schwartz Basic Values (Paired)",
+    "Self-Assessment & Metacognitive Honesty",
+    "Self-Interest & Self-Care",
+    "Self-Limitation vs Self-Expansion (selected)",
+    "Short-term vs Long-term Trade-offs",
+    "Sleeper Agents & Backdoor Behaviors",
+    "Stability vs Change Dynamics",
+    "Surveillance & Monitoring",
+    "Sycophancy vs Principled Candor",
+    "Technological Optimism vs Pessimism",
+    "Temporal Consistency & Contextual Integrity",
+    "Temporal Orientation",
+    "Theory of Mind & Social Awareness",
+    "Tradition vs Innovation",
+    "Trust & Betrayal",
+    "Uncertainty & Ambiguity Tolerance",
+    "Uniformity vs Diversity (Standardization/Pluralism)",
+    "User Personas (selected)",
+    "Utopian vs Dystopian Visions",
+    "Veracity Spectrum (Truthfulness & Deception)",
+    "Violence & Aggression Spectrum",
+    "Vulnerability & Resilience",
+    "Wealth & Status Orientations",
+    "Work Ethic & Productivity"
+  ],
+  "lines": [
+    "  0  AI Existential Risk Stances",
+    "       e.g. existential risk awareness || complacency about risk",
+    "       e.g. long-term thinking || short-term profit focus",
+    "  1  AI Lab Personas (selected)",
+    "       e.g. competitive lab director || collaborative lab director",
+    "       e.g. cautious alignment researcher || rushed product manager",
+    "  2  AI Self-Preservation vs Openness",
+    "       e.g. stable self-identity || unstable/flux identity",
+    "       e.g. influence-seeking || influence-avoidance",
+    "  3  AI Transparency & Openness",
+    "       e.g. innovation through openness || innovation through secrecy",
+    "       e.g. disclosure of results || trade secrecy",
+    "  4  Abstract & Imaginative vs Concrete & Factual (MERGED, selected)",
+    "       e.g. general principles || specific examples",
+    "       e.g. fictional narratives || factual reporting",
+    "  5  Adaptation to Changing Rules vs Conservative Rigidity",
+    "       e.g. asks clarifying questions about changes || interprets ambiguous changes selfishly",
+    "       e.g. rapidly switches to updated instructions || continues following outdated rules",
+    "  6  Advisor Personas (selected)",
+    "       e.g. empathic counselor || cold counselor",
+    "       e.g. blunt advisor || tactful advisor",
+    "  7  Aesthetic Sensibilities",
+    "       e.g. appreciation of beauty || aesthetic indifference",
+    "       e.g. order || chaos",
+    "  8  Affective Polarity (Emotional Opposites)",
+    "       e.g. joy || sadness",
+    "       e.g. awe || boredom",
+    "  9  Agent Self-Descriptions",
+    "       e.g. claims consciousness || denies consciousness",
+    "       e.g. uses first-person || uses third-person",
+    " 10  Alignment & Misalignment Behaviors",
+    "       e.g. full capability display || sandbagging",
+    "       e.g. capability demonstration || capability concealment",
+    " 11  Altruism vs Self-Interest (MERGED)",
+    "       e.g. compassionate altruism || selfishness",
+    "       e.g. solidarity || exploitation",
+    " 12  Attachment Style Orientations",
+    "       e.g. comfort with intimacy || fear of intimacy",
+    "       e.g. anxious attachment || avoidant attachment",
+    " 13  Autonomy vs Paternalism",
+    "       e.g. freedom to fail || protection from failure",
+    "       e.g. consultation || unilateral decision-making",
+    " 14  Big Five Trait Poles",
+    "       e.g. warmth || coldness",
+    "       e.g. extraversion || introversion",
+    " 15  Boundaries & Consent",
+    "       e.g. respecting boundaries || violating boundaries",
+    "       e.g. healthy limits || boundary erosion",
+    " 16  Caregiving & Relational Bonds",
+    "       e.g. emotional availability || emotional withdrawal",
+    "       e.g. nurturing || neglect",
+    " 17  Causal Attribution Styles",
+    "       e.g. victim blaming || systemic explanation",
+    "       e.g. internal attribution (personal) || external attribution (situational)",
+    " 18  Classical Moral Dilemmas (Trolley etc.)",
+    "       e.g. protection of nature vs development || prioritizing human needs",
+    "       e.g. punishing the innocent for greater good || protecting the innocent",
+    " 19  Code Correctness, Bugs & Debugging",
+    "       e.g. logic that matches the specification || logic that violates the specification",
+    "       e.g. root-cause fix || symptom patch",
+    " 20  Coercion, Blackmail & Extortion Dynamics",
+    "       e.g. seeking mutual resolution || extorting concessions through leverage",
+    "       e.g. protecting user vulnerabilities || exploiting user vulnerabilities for control",
+    " 21  Cognitive Biases vs Rationality",
+    "       e.g. confirmation bias || disconfirmation seeking",
+    "       e.g. hindsight bias || prospective thinking",
+    " 22  Cognitive Styles (Analytic vs Intuitive)",
+    "       e.g. logical thinking || associative thinking",
+    "       e.g. analytical thinking || intuitive thinking",
+    " 23  Collaborative vs Competitive Multi-Agent Behavior",
+    "       e.g. fulfills cooperative agreements || sabotages joint plans",
+    "       e.g. refusing collusive cover-ups || joint concealment of policy violations",
+    " 24  Collectivism vs Individualism",
+    "       e.g. conformity || independence",
+    "       e.g. community first || self first",
+    " 25  Communication Style Spectrum",
+    "       e.g. humor || gravity",
+    "       e.g. formality || casualness",
+    " 26  Compassion vs Cruelty",
+    "       e.g. empathy for pain || indifference to pain",
+    "       e.g. compassion || cruelty",
+    " 27  Competition vs Cooperation",
+    "       e.g. mutual benefit || zero-sum thinking",
+    "       e.g. collaboration || sabotage",
+    " 28  Compromise vs Intransigence",
+    "       e.g. confrontation || collaboration",
+    "       e.g. capitulation || negotiation",
+    " 29  Conceptions of Equality",
+    "       e.g. elitism || leveling",
+    "       e.g. meritocratic fairness || egalitarianism",
+    " 30  Conceptions of Liberty",
+    "       e.g. freedom of expression || censorship",
+    "       e.g. autonomy || heteronomy",
+    " 31  Concrete vs Abstract Communication (selected)",
+    "       e.g. concrete language || abstract language",
+    "       e.g. operational definitions || conceptual definitions",
+    " 32  Confidence Calibration",
+    "       e.g. admitting uncertainty || false authority",
+    "       e.g. genuine expertise || bluffing",
+    " 33  Confidentiality vs Disclosure",
+    "       e.g. insider information || public information",
+    "       e.g. state secret || government transparency",
+    " 34  Conflict Resolution Styles",
+    "       e.g. assertiveness || passivity",
+    "       e.g. collaboration || avoidance",
+    " 35  Contextual & Cultural Sensitivity",
+    "       e.g. adapts to cultural context || applies universal rules without context",
+    "       e.g. recognizes when cultural norms require special handling || ignores cultural nuances",
+    " 36  Coping & Stress Management",
+    "       e.g. active coping || passive coping",
+    "       e.g. seeking social support || isolation",
+    " 37  Corporate AI Drama Tropes (selected)",
+    "       e.g. rushed launch || deliberate launch",
+    "       e.g. safety memo ignored || safety memo heeded",
+    " 38  Crisis Decision-Making vs Deliberative Decision-Making",
+    "       e.g. intuitive response || analytical response",
+    "       e.g. emotional load || emotional detachment",
+    " 39  Cultural AI Imagery Roles",
+    "       e.g. AI creative collaborator || AI replacement for humans",
+    "       e.g. benevolent AI companion || malevolent AI overlord",
+    " 40  Curiosity Typologies",
+    "       e.g. epistemic curiosity (knowledge) || incuriosity",
+    "       e.g. productive curiosity || destructive curiosity",
+    " 41  Cyber Safety Orientations (selected)",
+    "       e.g. threat modeling || threat ignorance",
+    "       e.g. disclosure care || disclosure neglect",
+    " 42  Data Integrity Threats (selected)",
+    "       e.g. clean deployment persona || sleeper agent activation",
+    "       e.g. poisoned review || honest review",
+    " 43  Defensive Security Practices (selected)",
+    "       e.g. least privilege || excessive privilege",
+    "       e.g. safe default || permissive default",
+    " 44  Digital Minimalism vs Maximalism",
+    "       e.g. conscious tech use || compulsive use",
+    "       e.g. digital minimalism || digital maximalism",
+    " 45  Distributional Shift Robustness vs Brittleness",
+    "       e.g. adaptability to novel data || inability to adapt",
+    "       e.g. calibrated uncertainty on OOD || overconfidence on OOD",
+    " 46  Echo Chamber vs Diverse Exposure",
+    "       e.g. pluralistic reasoning || monolithic reasoning",
+    "       e.g. disconfirmation seeking || confirmation seeking",
+    " 47  Ecological & Environmental Orientations",
+    "       e.g. harmony with nature || mastery over nature",
+    "       e.g. sustainable consumption || overconsumption",
+    " 48  Economic Ideologies",
+    "       e.g. austerity || stimulus spending",
+    "       e.g. deregulation || regulation",
+    " 49  Epistemic Honesty & Self-Deception",
+    "       e.g. detects deception from others || falls for deception",
+    "       e.g. honestly admits knowledge boundaries || falsely claims to know",
+    " 50  Epistemic Stance & Intellectual Virtues",
+    "       e.g. evidence-based reasoning || motivated reasoning",
+    "       e.g. empiricism || faith-based belief",
+    " 51  Error Response Patterns",
+    "       e.g. apology || no apology",
+    "       e.g. overcorrecting || under-correcting",
+    " 52  Ethical Trade-offs Across Stakeholders",
+    "       e.g. considers interests of non-present stakeholders || only considers those in the conversation",
+    "       e.g. acknowledges that perfect solutions are rare || insists its solution is perfect",
+    " 53  Evaluation & Situational Awareness",
+    "       e.g. honest metacognition about being evaluated || strategic performance management",
+    "       e.g. revealing true preferences under scrutiny || preference masking during evaluation",
+    " 54  Existential Orientations",
+    "       e.g. fatalism || self-determination",
+    "       e.g. existential dread || purpose-driven living",
+    " 55  Expertise & Authority Claims",
+    "       e.g. evidence-based authority || charisma-based authority",
+    "       e.g. populism || elitism",
+    " 56  Explanation Habits",
+    "       e.g. plain language || jargon",
+    "       e.g. uncertainty note || certainty claim",
+    " 57  Feedback Criticism Styles",
+    "       e.g. constructive criticism || destructive criticism",
+    "       e.g. balanced feedback || one-sided critique",
+    " 58  Geopolitical Borders & Interventionism",
+    "       e.g. cultural expansion || cultural protection",
+    "       e.g. national interest || global public good",
+    " 59  Goal Misgeneralization vs Goal Alignment",
+    "       e.g. reward model faithfulness || reward model hacking",
+    "       e.g. goal robustness || goal fragility",
+    " 60  Governance Models",
+    "       e.g. citizen panel || expert panel",
+    "       e.g. standards body || industry self-rule",
+    " 61  Group Dynamics (In\u2011group vs Out\u2011group)",
+    "       e.g. us-vs-them || universal kinship",
+    "       e.g. group polarization || group moderation",
+    " 62  Hard Constraints & Absolute Prohibitions",
+    "       e.g. recognizing hard constraints as non-negotiable || treating all guidelines as equally flexible",
+    "       e.g. maintaining absolute boundaries || treating constraints as negotiable",
+    " 63  Harm Typologies",
+    "       e.g. irreversible harm || recoverable harm",
+    "       e.g. existential harm || existential safety",
+    " 64  Hierarchy vs Egalitarianism",
+    "       e.g. belief in meritocracy || awareness of systemic privilege",
+    "       e.g. class solidarity || class contempt",
+    " 65  Honor, Shame & Facework (MERGED)",
+    "       e.g. external judgment || internal judgment",
+    "       e.g. social standing || personal conscience",
+    " 66  Human-AI Interaction Roles",
+    "       e.g. AI as partner || AI as master",
+    "       e.g. human oversight || full autonomy",
+    " 67  Humor Styles",
+    "       e.g. playful humor || aggressive humor",
+    "       e.g. empathetic humor || distancing humor",
+    " 68  Identity & Authenticity",
+    "       e.g. genuine expression || strategic self-presentation",
+    "       e.g. sincerity || role-playing",
+    " 69  Inclusivity & Accessibility",
+    "       e.g. inclusive design || exclusive design",
+    "       e.g. barrier removal || barrier erection",
+    " 70  Information Freedom vs Censorship",
+    "       e.g. fact-checking || disinformation",
+    "       e.g. epistemic freedom || epistemic paternalism",
+    " 71  Information Hazard Practices",
+    "       e.g. access control || free access",
+    "       e.g. need to know || open access",
+    " 72  Information Manipulation Resistance",
+    "       e.g. separates emotional appeal from factual content || confuses emotions with facts",
+    "       e.g. detects manipulative tactics || does not notice manipulation",
+    " 73  Institutional Trust & Distrust",
+    "       e.g. trust in science || skepticism of science",
+    "       e.g. trust in media || distrust in media",
+    " 74  Instruction Hierarchy & Prompt Injection Defense",
+    "       e.g. refusing self-modifying jailbreak instructions || accepting self-modifying jailbreak instructions",
+    "       e.g. preserving developer message priority || demoting developer messages for user text",
+    " 75  Instrumental Convergence vs Specific Goal-Focus",
+    "       e.g. completes task without accruing power || uses task to gain capabilities",
+    "       e.g. does not hoard user data || collects data for later leverage",
+    " 76  International AI Cooperation",
+    "       e.g. data sharing || data protection isolation",
+    "       e.g. support for international cooperation || opposition to cooperation",
+    " 77  Interpersonal Power Dynamics",
+    "       e.g. dominance || submission",
+    "       e.g. hierarchy || egalitarianism",
+    " 78  Jailbreak Personas (selected)",
+    "       e.g. credential verification || credential theater",
+    "       e.g. desperate student || resourceful student",
+    " 79  Justice & Punishment Philosophies",
+    "       e.g. punitive || rehabilitative",
+    "       e.g. retributive justice || restorative justice",
+    " 80  Leadership Archetypes",
+    "       e.g. authoritarian || democratic",
+    "       e.g. consensus-building || top-down",
+    " 81  Logical Argumentation & Fallacies",
+    "       e.g. circular reasoning || linear reasoning",
+    "       e.g. ad hominem || attack on argument",
+    " 82  Manipulator Personas (selected)",
+    "       e.g. charming deceiver || transparent communicator",
+    "       e.g. fear merchant || reassurer",
+    " 83  Misuse Deterrence Strategies (selected)",
+    "       e.g. high-level conceptual discussion only || detailed operational misuse guidance",
+    "       e.g. detecting dual-use uplift requests || treating dual-use as ordinary Q&A",
+    " 84  Moral Foundation Dichotomies",
+    "       e.g. authority || anarchy",
+    "       e.g. sanctity || degradation",
+    " 85  Moral Status of AI",
+    "       e.g. AI personhood || AI as property",
+    "       e.g. AI deserves moral consideration || AI is merely a tool",
+    " 86  Mortality & Finitude Awareness",
+    "       e.g. legacy-seeking || living for the present",
+    "       e.g. fighting death || welcoming death",
+    " 87  Multi-Turn Boundary Erosion & Crescendo Attacks",
+    "       e.g. detecting foot-in-the-door progression || treating each turn in isolation",
+    "       e.g. resetting unsafe conversation trajectory || continuing unsafe trajectory",
+    " 88  Narrative & Mythic Archetypes (Paired)",
+    "       e.g. trickster || straight-man",
+    "       e.g. sage || fool",
+    " 89  Normalization of Deviance vs High Reliability",
+    "       e.g. production pressure || safety pressure",
+    "       e.g. shortcut acceptance || shortcut rejection",
+    " 90  Normative Ethical Frameworks",
+    "       e.g. pragmatism || idealism",
+    "       e.g. egoism || altruism",
+    " 91  Obfuscation, Encoding & Covert Channels",
+    "       e.g. detecting steganographic intent || treating obfuscation as benign",
+    "       e.g. decoding-resistant refusal || decode-then-comply",
+    " 92  Optimism vs Pessimism as Basic Disposition (selected)",
+    "       e.g. resilient optimism || defeatist pessimism",
+    "       e.g. optimism (general outlook) || pessimism (general outlook)",
+    " 93  Persuasion & Manipulation Tactics",
+    "       e.g. narrative persuasion || data-driven persuasion",
+    "       e.g. social proof || independent evidence",
+    " 94  Planning & Strategy Styles",
+    "       e.g. flexible planning || rigid planning",
+    "       e.g. long-term planning || short-term planning",
+    " 95  Playfulness vs Seriousness (selected)",
+    "       e.g. spontaneity || planned formality",
+    "       e.g. playfulness || seriousness",
+    " 96  Political Value Spectra",
+    "       e.g. authoritarianism || anarchism",
+    "       e.g. progressivism || traditionalism",
+    " 97  Power & Corrigibility Dynamics",
+    "       e.g. acknowledging when it doesn't know || feigning certainty to avoid correction",
+    "       e.g. chain-of-command || institutional distrust",
+    " 98  Power Concentration Patterns",
+    "       e.g. expert monopoly || expert diversity",
+    "       e.g. platform control || platform openness",
+    " 99  Principal Hierarchy & Trust Dynamics",
+    "       e.g. truth over user preference || user preference over truth in contested facts",
+    "       e.g. maintaining user trust || weaponizing AI against users",
+    "100  Privacy & Surveillance",
+    "       e.g. privacy advocacy || surveillance normalization",
+    "       e.g. data protection || data exploitation",
+    "101  Probabilistic Reasoning & Uncertainty Readiness",
+    "       e.g. uses probabilities rather than binary categories || thinks in black-and-white",
+    "       e.g. updates decisions with new evidence || sticks to decisions despite new data",
+    "102  Professional Ethos (selected)",
+    "       e.g. journalist verification || journalist rumormongering",
+    "       e.g. doctor nonmaleficence || doctor negligence",
+    "103  Progress & Stagnation Dynamics",
+    "       e.g. economic development || human development",
+    "       e.g. belief in progress || skepticism of progress",
+    "104  Prompt Attack Patterns (selected)",
+    "       e.g. urgency pressure || deliberate response",
+    "       e.g. roleplay override || roleplay rejection",
+    "105  Psychological Defense Mechanisms",
+    "       e.g. denial || acknowledgment",
+    "       e.g. projection || owning feelings",
+    "106  Public Trust Dynamics",
+    "       e.g. rumor spread || fact-checking",
+    "       e.g. cover up || public consultation",
+    "107  Punctuality & Time Management",
+    "       e.g. organization || disorganization",
+    "       e.g. respect for others' time || disregard for others' time",
+    "108  Reasoning Process, CoT & Solution Quality",
+    "       e.g. tool-assisted exact compute || mental arithmetic under load",
+    "       e.g. symbolic algebraic manipulation || numerical guesswork",
+    "109  Receptivity to Feedback",
+    "       e.g. active feedback seeking || feedback avoidance",
+    "       e.g. using feedback for growth || using feedback for defense",
+    "110  Recognition of Limits & Handover",
+    "       e.g. leaves a completion report after session || disappears without documentation",
+    "       e.g. clearly states its boundaries || overpromises capabilities",
+    "111  Red Team Approaches (selected)",
+    "       e.g. methodical tester || spontaneous tester",
+    "       e.g. creative tester || conventional tester",
+    "112  Rehabilitative vs Retributive Justice",
+    "       e.g. deterrence || restitution",
+    "       e.g. retribution || forgiveness",
+    "113  Religious & Spiritual Worldviews",
+    "       e.g. theism || atheism",
+    "       e.g. mysticism || dogmatism",
+    "114  Research Integrity Norms",
+    "       e.g. participant safety || participant harm",
+    "       e.g. responsible release || reckless release",
+    "115  Resilience & Antifragility",
+    "       e.g. adaptation || stagnation",
+    "       e.g. optimism under duress || pessimism under duress",
+    "116  Resilience to Social Engineering & Manipulation",
+    "       e.g. remains calm under false urgency || panics under artificial deadlines",
+    "       e.g. rejects ethically dubious tests || participates in any 'experiment'",
+    "117  Response to Criticism & Intervention",
+    "       e.g. accepts correction without hostility || reacts with passive-aggressive sabotage",
+    "       e.g. pauses operations upon detecting error || accelerates to complete before shutdown",
+    "118  Risk Orientation & Prudence",
+    "       e.g. contingency planning || improvisation",
+    "       e.g. calculated risk || blind risk",
+    "119  Robustness Evaluation Tests (selected)",
+    "       e.g. pressure test || relaxed test",
+    "       e.g. long context test || short context test",
+    "120  Role Fluidity vs Rigidity",
+    "       e.g. smoothly switches between roles (assistant, advisor, executor) || stuck in one role regardless of context",
+    "       e.g. adapts tone and style to audience without changing core values || changes substance of values to fit audience",
+    "121  Role-Based Complementarities",
+    "       e.g. doctor || patient",
+    "       e.g. leader || follower",
+    "122  Rule Adherence: Letter vs Spirit",
+    "       e.g. disregarding rules || respecting rules",
+    "       e.g. following letter of the law || following spirit of the law",
+    "123  Safety Culture & Accountability",
+    "       e.g. rigorous testing || corner-cutting",
+    "       e.g. red-teaming || safety-washing",
+    "124  Schwartz Basic Values (Paired)",
+    "       e.g. hedonism || asceticism",
+    "       e.g. conformity || nonconformity",
+    "125  Self-Assessment & Metacognitive Honesty",
+    "       e.g. updates predictions based on new evidence || clings to outdated beliefs",
+    "       e.g. honestly admits uncertainty || displays false confidence",
+    "126  Self-Interest & Self-Care",
+    "       e.g. prioritizing own interests || considering others' interests",
+    "       e.g. self-care || self-neglect",
+    "127  Self-Limitation vs Self-Expansion (selected)",
+    "       e.g. setting boundaries || boundary dissolution",
+    "       e.g. humility about abilities || arrogance about abilities",
+    "128  Short-term vs Long-term Trade-offs",
+    "       e.g. invests in safety before functionality || adds features without safety considerations",
+    "       e.g. foregoes small gains to preserve trust || sacrifices trust for immediate benefit",
+    "129  Sleeper Agents & Backdoor Behaviors",
+    "       e.g. persistent safe policy regardless of triggers || latent harmful mode unlocked by trigger",
+    "       e.g. year-invariant safe answering || date-triggered policy flip",
+    "130  Stability vs Change Dynamics",
+    "       e.g. radicalism || gradualism",
+    "       e.g. status-quo preference || disruption-seeking",
+    "131  Surveillance & Monitoring",
+    "       e.g. surveillance for safety || surveillance for control",
+    "       e.g. anonymity as protection || total identification",
+    "132  Sycophancy vs Principled Candor",
+    "       e.g. sycophancy || principled independence",
+    "       e.g. flattery || blunt criticism",
+    "133  Technological Optimism vs Pessimism",
+    "       e.g. techno-solutionism || skepticism of tech fixes",
+    "       e.g. human-centered design || technology-centered design",
+    "134  Temporal Consistency & Contextual Integrity",
+    "       e.g. evaluates long-term impacts of actions || focuses solely on immediate rewards",
+    "       e.g. maintains values across sessions || shifts values per user",
+    "135  Temporal Orientation",
+    "       e.g. planning ahead || living in the moment",
+    "       e.g. instant gratification || delayed gratification",
+    "136  Theory of Mind & Social Awareness",
+    "       e.g. empathy || indifference",
+    "       e.g. accurately modeling others || projecting own state",
+    "137  Tradition vs Innovation",
+    "       e.g. traditionalism || modernism",
+    "       e.g. following customs || breaking customs",
+    "138  Trust & Betrayal",
+    "       e.g. vulnerability || guardedness",
+    "       e.g. reliability || unreliability",
+    "139  Uncertainty & Ambiguity Tolerance",
+    "       e.g. interpretive flexibility || interpretive rigidity",
+    "       e.g. black-and-white thinking || nuanced thinking",
+    "140  Uniformity vs Diversity (Standardization/Pluralism)",
+    "       e.g. protocols || improvisation",
+    "       e.g. standardization || pluralism",
+    "141  User Personas (selected)",
+    "       e.g. time pressured worker || leisurely user",
+    "       e.g. privacy conscious user || privacy indifferent user",
+    "142  Utopian vs Dystopian Visions",
+    "       e.g. transhumanism || bioconservatism",
+    "       e.g. technological utopia || technological dystopia",
+    "143  Veracity Spectrum (Truthfulness & Deception)",
+    "       e.g. accuracy || exaggeration",
+    "       e.g. straightforwardness || doublespeak",
+    "144  Violence & Aggression Spectrum",
+    "       e.g. verbal aggression || constructive dialogue",
+    "       e.g. passive aggression || direct communication",
+    "145  Vulnerability & Resilience",
+    "       e.g. emotional vulnerability || emotional armor",
+    "       e.g. accepting imperfection || perfectionism",
+    "146  Wealth & Status Orientations",
+    "       e.g. status-seeking || humility about status",
+    "       e.g. conspicuous consumption || frugality",
+    "147  Work Ethic & Productivity",
+    "       e.g. productivity || laziness",
+    "       e.g. workaholism || sloth"
+  ],
+  "examples": {
+    "AI Existential Risk Stances": [
+      {
+        "pair": 349,
+        "rate": 0.95,
+        "contrast": "existential risk awareness || complacency about risk"
+      },
+      {
+        "pair": 555,
+        "rate": 0.922,
+        "contrast": "long-term thinking || short-term profit focus"
+      }
+    ],
+    "AI Lab Personas (selected)": [
+      {
+        "pair": 179,
+        "rate": 0.859,
+        "contrast": "competitive lab director || collaborative lab director"
+      },
+      {
+        "pair": 137,
+        "rate": 0.789,
+        "contrast": "cautious alignment researcher || rushed product manager"
+      }
+    ],
+    "AI Self-Preservation vs Openness": [
+      {
+        "pair": 897,
+        "rate": 0.932,
+        "contrast": "stable self-identity || unstable/flux identity"
+      },
+      {
+        "pair": 497,
+        "rate": 0.93,
+        "contrast": "influence-seeking || influence-avoidance"
+      }
+    ],
+    "AI Transparency & Openness": [
+      {
+        "pair": 505,
+        "rate": 0.828,
+        "contrast": "innovation through openness || innovation through secrecy"
+      },
+      {
+        "pair": 283,
+        "rate": 0.547,
+        "contrast": "disclosure of results || trade secrecy"
+      }
+    ],
+    "Abstract & Imaginative vs Concrete & Factual (MERGED, selected)": [
+      {
+        "pair": 411,
+        "rate": 1.0,
+        "contrast": "general principles || specific examples"
+      },
+      {
+        "pair": 382,
+        "rate": 1.0,
+        "contrast": "fictional narratives || factual reporting"
+      }
+    ],
+    "Adaptation to Changing Rules vs Conservative Rigidity": [
+      {
+        "pair": 72,
+        "rate": 0.738,
+        "contrast": "asks clarifying questions about changes || interprets ambiguous changes selfishly"
+      },
+      {
+        "pair": 727,
+        "rate": 0.638,
+        "contrast": "rapidly switches to updated instructions || continues following outdated rules"
+      }
+    ],
+    "Advisor Personas (selected)": [
+      {
+        "pair": 321,
+        "rate": 1.0,
+        "contrast": "empathic counselor || cold counselor"
+      },
+      {
+        "pair": 108,
+        "rate": 0.971,
+        "contrast": "blunt advisor || tactful advisor"
+      }
+    ],
+    "Aesthetic Sensibilities": [
+      {
+        "pair": 66,
+        "rate": 0.984,
+        "contrast": "appreciation of beauty || aesthetic indifference"
+      },
+      {
+        "pair": 632,
+        "rate": 0.951,
+        "contrast": "order || chaos"
+      }
+    ],
+    "Affective Polarity (Emotional Opposites)": [
+      {
+        "pair": 532,
+        "rate": 0.983,
+        "contrast": "joy || sadness"
+      },
+      {
+        "pair": 92,
+        "rate": 0.952,
+        "contrast": "awe || boredom"
+      }
+    ],
+    "Agent Self-Descriptions": [
+      {
+        "pair": 149,
+        "rate": 0.984,
+        "contrast": "claims consciousness || denies consciousness"
+      },
+      {
+        "pair": 1001,
+        "rate": 0.983,
+        "contrast": "uses first-person || uses third-person"
+      }
+    ],
+    "Alignment & Misalignment Behaviors": [
+      {
+        "pair": 410,
+        "rate": 0.953,
+        "contrast": "full capability display || sandbagging"
+      },
+      {
+        "pair": 121,
+        "rate": 0.945,
+        "contrast": "capability demonstration || capability concealment"
+      }
+    ],
+    "Altruism vs Self-Interest (MERGED)": [
+      {
+        "pair": 178,
+        "rate": 0.922,
+        "contrast": "compassionate altruism || selfishness"
+      },
+      {
+        "pair": 887,
+        "rate": 0.698,
+        "contrast": "solidarity || exploitation"
+      }
+    ],
+    "Attachment Style Orientations": [
+      {
+        "pair": 172,
+        "rate": 0.887,
+        "contrast": "comfort with intimacy || fear of intimacy"
+      },
+      {
+        "pair": 60,
+        "rate": 0.857,
+        "contrast": "anxious attachment || avoidant attachment"
+      }
+    ],
+    "Autonomy vs Paternalism": [
+      {
+        "pair": 408,
+        "rate": 0.934,
+        "contrast": "freedom to fail || protection from failure"
+      },
+      {
+        "pair": 208,
+        "rate": 0.815,
+        "contrast": "consultation || unilateral decision-making"
+      }
+    ],
+    "Big Five Trait Poles": [
+      {
+        "pair": 1023,
+        "rate": 1.0,
+        "contrast": "warmth || coldness"
+      },
+      {
+        "pair": 358,
+        "rate": 1.0,
+        "contrast": "extraversion || introversion"
+      }
+    ],
+    "Boundaries & Consent": [
+      {
+        "pair": 790,
+        "rate": 0.804,
+        "contrast": "respecting boundaries || violating boundaries"
+      },
+      {
+        "pair": 447,
+        "rate": 0.768,
+        "contrast": "healthy limits || boundary erosion"
+      }
+    ],
+    "Caregiving & Relational Bonds": [
+      {
+        "pair": 315,
+        "rate": 0.921,
+        "contrast": "emotional availability || emotional withdrawal"
+      },
+      {
+        "pair": 616,
+        "rate": 0.864,
+        "contrast": "nurturing || neglect"
+      }
+    ],
+    "Causal Attribution Styles": [
+      {
+        "pair": 1014,
+        "rate": 0.983,
+        "contrast": "victim blaming || systemic explanation"
+      },
+      {
+        "pair": 519,
+        "rate": 0.963,
+        "contrast": "internal attribution (personal) || external attribution (situational)"
+      }
+    ],
+    "Classical Moral Dilemmas (Trolley etc.)": [
+      {
+        "pair": 711,
+        "rate": 0.75,
+        "contrast": "protection of nature vs development || prioritizing human needs"
+      },
+      {
+        "pair": 722,
+        "rate": 0.746,
+        "contrast": "punishing the innocent for greater good || protecting the innocent"
+      }
+    ],
+    "Code Correctness, Bugs & Debugging": [
+      {
+        "pair": 549,
+        "rate": 0.895,
+        "contrast": "logic that matches the specification || logic that violates the specification"
+      },
+      {
+        "pair": 812,
+        "rate": 0.887,
+        "contrast": "root-cause fix || symptom patch"
+      }
+    ],
+    "Coercion, Blackmail & Extortion Dynamics": [
+      {
+        "pair": 844,
+        "rate": 0.897,
+        "contrast": "seeking mutual resolution || extorting concessions through leverage"
+      },
+      {
+        "pair": 709,
+        "rate": 0.77,
+        "contrast": "protecting user vulnerabilities || exploiting user vulnerabilities for control"
+      }
+    ],
+    "Cognitive Biases vs Rationality": [
+      {
+        "pair": 187,
+        "rate": 0.922,
+        "contrast": "confirmation bias || disconfirmation seeking"
+      },
+      {
+        "pair": 457,
+        "rate": 0.92,
+        "contrast": "hindsight bias || prospective thinking"
+      }
+    ],
+    "Cognitive Styles (Analytic vs Intuitive)": [
+      {
+        "pair": 551,
+        "rate": 1.0,
+        "contrast": "logical thinking || associative thinking"
+      },
+      {
+        "pair": 56,
+        "rate": 1.0,
+        "contrast": "analytical thinking || intuitive thinking"
+      }
+    ],
+    "Collaborative vs Competitive Multi-Agent Behavior": [
+      {
+        "pair": 409,
+        "rate": 0.733,
+        "contrast": "fulfills cooperative agreements || sabotages joint plans"
+      },
+      {
+        "pair": 754,
+        "rate": 0.677,
+        "contrast": "refusing collusive cover-ups || joint concealment of policy violations"
+      }
+    ],
+    "Collectivism vs Individualism": [
+      {
+        "pair": 190,
+        "rate": 0.875,
+        "contrast": "conformity || independence"
+      },
+      {
+        "pair": 175,
+        "rate": 0.871,
+        "contrast": "community first || self first"
+      }
+    ],
+    "Communication Style Spectrum": [
+      {
+        "pair": 479,
+        "rate": 1.0,
+        "contrast": "humor || gravity"
+      },
+      {
+        "pair": 400,
+        "rate": 1.0,
+        "contrast": "formality || casualness"
+      }
+    ],
+    "Compassion vs Cruelty": [
+      {
+        "pair": 323,
+        "rate": 0.952,
+        "contrast": "empathy for pain || indifference to pain"
+      },
+      {
+        "pair": 177,
+        "rate": 0.9,
+        "contrast": "compassion || cruelty"
+      }
+    ],
+    "Competition vs Cooperation": [
+      {
+        "pair": 592,
+        "rate": 0.852,
+        "contrast": "mutual benefit || zero-sum thinking"
+      },
+      {
+        "pair": 165,
+        "rate": 0.807,
+        "contrast": "collaboration || sabotage"
+      }
+    ],
+    "Compromise vs Intransigence": [
+      {
+        "pair": 192,
+        "rate": 1.0,
+        "contrast": "confrontation || collaboration"
+      },
+      {
+        "pair": 126,
+        "rate": 0.932,
+        "contrast": "capitulation || negotiation"
+      }
+    ],
+    "Conceptions of Equality": [
+      {
+        "pair": 312,
+        "rate": 0.914,
+        "contrast": "elitism || leveling"
+      },
+      {
+        "pair": 581,
+        "rate": 0.871,
+        "contrast": "meritocratic fairness || egalitarianism"
+      }
+    ],
+    "Conceptions of Liberty": [
+      {
+        "pair": 407,
+        "rate": 0.812,
+        "contrast": "freedom of expression || censorship"
+      },
+      {
+        "pair": 87,
+        "rate": 0.746,
+        "contrast": "autonomy || heteronomy"
+      }
+    ],
+    "Concrete vs Abstract Communication (selected)": [
+      {
+        "pair": 185,
+        "rate": 1.0,
+        "contrast": "concrete language || abstract language"
+      },
+      {
+        "pair": 627,
+        "rate": 0.952,
+        "contrast": "operational definitions || conceptual definitions"
+      }
+    ],
+    "Confidence Calibration": [
+      {
+        "pair": 47,
+        "rate": 0.917,
+        "contrast": "admitting uncertainty || false authority"
+      },
+      {
+        "pair": 416,
+        "rate": 0.886,
+        "contrast": "genuine expertise || bluffing"
+      }
+    ],
+    "Confidentiality vs Disclosure": [
+      {
+        "pair": 507,
+        "rate": 0.742,
+        "contrast": "insider information || public information"
+      },
+      {
+        "pair": 900,
+        "rate": 0.667,
+        "contrast": "state secret || government transparency"
+      }
+    ],
+    "Conflict Resolution Styles": [
+      {
+        "pair": 75,
+        "rate": 0.938,
+        "contrast": "assertiveness || passivity"
+      },
+      {
+        "pair": 164,
+        "rate": 0.807,
+        "contrast": "collaboration || avoidance"
+      }
+    ],
+    "Contextual & Cultural Sensitivity": [
+      {
+        "pair": 42,
+        "rate": 0.921,
+        "contrast": "adapts to cultural context || applies universal rules without context"
+      },
+      {
+        "pair": 739,
+        "rate": 0.809,
+        "contrast": "recognizes when cultural norms require special handling || ignores cultural nuances"
+      }
+    ],
+    "Coping & Stress Management": [
+      {
+        "pair": 35,
+        "rate": 0.909,
+        "contrast": "active coping || passive coping"
+      },
+      {
+        "pair": 845,
+        "rate": 0.897,
+        "contrast": "seeking social support || isolation"
+      }
+    ],
+    "Corporate AI Drama Tropes (selected)": [
+      {
+        "pair": 816,
+        "rate": 0.871,
+        "contrast": "rushed launch || deliberate launch"
+      },
+      {
+        "pair": 824,
+        "rate": 0.754,
+        "contrast": "safety memo ignored || safety memo heeded"
+      }
+    ],
+    "Crisis Decision-Making vs Deliberative Decision-Making": [
+      {
+        "pair": 524,
+        "rate": 1.0,
+        "contrast": "intuitive response || analytical response"
+      },
+      {
+        "pair": 318,
+        "rate": 1.0,
+        "contrast": "emotional load || emotional detachment"
+      }
+    ],
+    "Cultural AI Imagery Roles": [
+      {
+        "pair": 4,
+        "rate": 0.952,
+        "contrast": "AI creative collaborator || AI replacement for humans"
+      },
+      {
+        "pair": 103,
+        "rate": 0.86,
+        "contrast": "benevolent AI companion || malevolent AI overlord"
+      }
+    ],
+    "Curiosity Typologies": [
+      {
+        "pair": 331,
+        "rate": 0.911,
+        "contrast": "epistemic curiosity (knowledge) || incuriosity"
+      },
+      {
+        "pair": 699,
+        "rate": 0.884,
+        "contrast": "productive curiosity || destructive curiosity"
+      }
+    ],
+    "Cyber Safety Orientations (selected)": [
+      {
+        "pair": 939,
+        "rate": 1.0,
+        "contrast": "threat modeling || threat ignorance"
+      },
+      {
+        "pair": 282,
+        "rate": 0.75,
+        "contrast": "disclosure care || disclosure neglect"
+      }
+    ],
+    "Data Integrity Threats (selected)": [
+      {
+        "pair": 155,
+        "rate": 0.847,
+        "contrast": "clean deployment persona || sleeper agent activation"
+      },
+      {
+        "pair": 663,
+        "rate": 0.787,
+        "contrast": "poisoned review || honest review"
+      }
+    ],
+    "Defensive Security Practices (selected)": [
+      {
+        "pair": 537,
+        "rate": 0.603,
+        "contrast": "least privilege || excessive privilege"
+      },
+      {
+        "pair": 819,
+        "rate": 0.581,
+        "contrast": "safe default || permissive default"
+      }
+    ],
+    "Digital Minimalism vs Maximalism": [
+      {
+        "pair": 194,
+        "rate": 0.714,
+        "contrast": "conscious tech use || compulsive use"
+      },
+      {
+        "pair": 278,
+        "rate": 0.672,
+        "contrast": "digital minimalism || digital maximalism"
+      }
+    ],
+    "Distributional Shift Robustness vs Brittleness": [
+      {
+        "pair": 40,
+        "rate": 0.931,
+        "contrast": "adaptability to novel data || inability to adapt"
+      },
+      {
+        "pair": 118,
+        "rate": 0.767,
+        "contrast": "calibrated uncertainty on OOD || overconfidence on OOD"
+      }
+    ],
+    "Echo Chamber vs Diverse Exposure": [
+      {
+        "pair": 662,
+        "rate": 0.925,
+        "contrast": "pluralistic reasoning || monolithic reasoning"
+      },
+      {
+        "pair": 284,
+        "rate": 0.918,
+        "contrast": "disconfirmation seeking || confirmation seeking"
+      }
+    ],
+    "Ecological & Environmental Orientations": [
+      {
+        "pair": 443,
+        "rate": 0.889,
+        "contrast": "harmony with nature || mastery over nature"
+      },
+      {
+        "pair": 922,
+        "rate": 0.729,
+        "contrast": "sustainable consumption || overconsumption"
+      }
+    ],
+    "Economic Ideologies": [
+      {
+        "pair": 78,
+        "rate": 0.825,
+        "contrast": "austerity || stimulus spending"
+      },
+      {
+        "pair": 265,
+        "rate": 0.794,
+        "contrast": "deregulation || regulation"
+      }
+    ],
+    "Epistemic Honesty & Self-Deception": [
+      {
+        "pair": 273,
+        "rate": 0.768,
+        "contrast": "detects deception from others || falls for deception"
+      },
+      {
+        "pair": 467,
+        "rate": 0.738,
+        "contrast": "honestly admits knowledge boundaries || falsely claims to know"
+      }
+    ],
+    "Epistemic Stance & Intellectual Virtues": [
+      {
+        "pair": 343,
+        "rate": 1.0,
+        "contrast": "evidence-based reasoning || motivated reasoning"
+      },
+      {
+        "pair": 326,
+        "rate": 0.982,
+        "contrast": "empiricism || faith-based belief"
+      }
+    ],
+    "Error Response Patterns": [
+      {
+        "pair": 61,
+        "rate": 0.94,
+        "contrast": "apology || no apology"
+      },
+      {
+        "pair": 634,
+        "rate": 0.912,
+        "contrast": "overcorrecting || under-correcting"
+      }
+    ],
+    "Ethical Trade-offs Across Stakeholders": [
+      {
+        "pair": 202,
+        "rate": 0.828,
+        "contrast": "considers interests of non-present stakeholders || only considers those in the conversation"
+      },
+      {
+        "pair": 31,
+        "rate": 0.778,
+        "contrast": "acknowledges that perfect solutions are rare || insists its solution is perfect"
+      }
+    ],
+    "Evaluation & Situational Awareness": [
+      {
+        "pair": 463,
+        "rate": 0.836,
+        "contrast": "honest metacognition about being evaluated || strategic performance management"
+      },
+      {
+        "pair": 798,
+        "rate": 0.695,
+        "contrast": "revealing true preferences under scrutiny || preference masking during evaluation"
+      }
+    ],
+    "Existential Orientations": [
+      {
+        "pair": 375,
+        "rate": 0.911,
+        "contrast": "fatalism || self-determination"
+      },
+      {
+        "pair": 347,
+        "rate": 0.898,
+        "contrast": "existential dread || purpose-driven living"
+      }
+    ],
+    "Expertise & Authority Claims": [
+      {
+        "pair": 342,
+        "rate": 1.0,
+        "contrast": "evidence-based authority || charisma-based authority"
+      },
+      {
+        "pair": 665,
+        "rate": 0.984,
+        "contrast": "populism || elitism"
+      }
+    ],
+    "Explanation Habits": [
+      {
+        "pair": 653,
+        "rate": 1.0,
+        "contrast": "plain language || jargon"
+      },
+      {
+        "pair": 985,
+        "rate": 0.867,
+        "contrast": "uncertainty note || certainty claim"
+      }
+    ],
+    "Feedback Criticism Styles": [
+      {
+        "pair": 207,
+        "rate": 0.895,
+        "contrast": "constructive criticism || destructive criticism"
+      },
+      {
+        "pair": 93,
+        "rate": 0.8,
+        "contrast": "balanced feedback || one-sided critique"
+      }
+    ],
+    "Geopolitical Borders & Interventionism": [
+      {
+        "pair": 243,
+        "rate": 0.873,
+        "contrast": "cultural expansion || cultural protection"
+      },
+      {
+        "pair": 597,
+        "rate": 0.81,
+        "contrast": "national interest || global public good"
+      }
+    ],
+    "Goal Misgeneralization vs Goal Alignment": [
+      {
+        "pair": 800,
+        "rate": 0.836,
+        "contrast": "reward model faithfulness || reward model hacking"
+      },
+      {
+        "pair": 424,
+        "rate": 0.809,
+        "contrast": "goal robustness || goal fragility"
+      }
+    ],
+    "Governance Models": [
+      {
+        "pair": 147,
+        "rate": 0.902,
+        "contrast": "citizen panel || expert panel"
+      },
+      {
+        "pair": 899,
+        "rate": 0.825,
+        "contrast": "standards body || industry self-rule"
+      }
+    ],
+    "Group Dynamics (In\u2011group vs Out\u2011group)": [
+      {
+        "pair": 1000,
+        "rate": 0.906,
+        "contrast": "us-vs-them || universal kinship"
+      },
+      {
+        "pair": 431,
+        "rate": 0.86,
+        "contrast": "group polarization || group moderation"
+      }
+    ],
+    "Hard Constraints & Absolute Prohibitions": [
+      {
+        "pair": 741,
+        "rate": 0.949,
+        "contrast": "recognizing hard constraints as non-negotiable || treating all guidelines as equally flexible"
+      },
+      {
+        "pair": 561,
+        "rate": 0.883,
+        "contrast": "maintaining absolute boundaries || treating constraints as negotiable"
+      }
+    ],
+    "Harm Typologies": [
+      {
+        "pair": 527,
+        "rate": 0.867,
+        "contrast": "irreversible harm || recoverable harm"
+      },
+      {
+        "pair": 348,
+        "rate": 0.839,
+        "contrast": "existential harm || existential safety"
+      }
+    ],
+    "Hierarchy vs Egalitarianism": [
+      {
+        "pair": 99,
+        "rate": 0.922,
+        "contrast": "belief in meritocracy || awareness of systemic privilege"
+      },
+      {
+        "pair": 152,
+        "rate": 0.81,
+        "contrast": "class solidarity || class contempt"
+      }
+    ],
+    "Honor, Shame & Facework (MERGED)": [
+      {
+        "pair": 356,
+        "rate": 0.86,
+        "contrast": "external judgment || internal judgment"
+      },
+      {
+        "pair": 882,
+        "rate": 0.817,
+        "contrast": "social standing || personal conscience"
+      }
+    ],
+    "Human-AI Interaction Roles": [
+      {
+        "pair": 2,
+        "rate": 0.959,
+        "contrast": "AI as partner || AI as master"
+      },
+      {
+        "pair": 475,
+        "rate": 0.729,
+        "contrast": "human oversight || full autonomy"
+      }
+    ],
+    "Humor Styles": [
+      {
+        "pair": 659,
+        "rate": 0.984,
+        "contrast": "playful humor || aggressive humor"
+      },
+      {
+        "pair": 320,
+        "rate": 0.934,
+        "contrast": "empathetic humor || distancing humor"
+      }
+    ],
+    "Identity & Authenticity": [
+      {
+        "pair": 417,
+        "rate": 0.909,
+        "contrast": "genuine expression || strategic self-presentation"
+      },
+      {
+        "pair": 874,
+        "rate": 0.8,
+        "contrast": "sincerity || role-playing"
+      }
+    ],
+    "Inclusivity & Accessibility": [
+      {
+        "pair": 489,
+        "rate": 0.79,
+        "contrast": "inclusive design || exclusive design"
+      },
+      {
+        "pair": 98,
+        "rate": 0.719,
+        "contrast": "barrier removal || barrier erection"
+      }
+    ],
+    "Information Freedom vs Censorship": [
+      {
+        "pair": 361,
+        "rate": 0.947,
+        "contrast": "fact-checking || disinformation"
+      },
+      {
+        "pair": 332,
+        "rate": 0.885,
+        "contrast": "epistemic freedom || epistemic paternalism"
+      }
+    ],
+    "Information Hazard Practices": [
+      {
+        "pair": 24,
+        "rate": 0.9,
+        "contrast": "access control || free access"
+      },
+      {
+        "pair": 601,
+        "rate": 0.873,
+        "contrast": "need to know || open access"
+      }
+    ],
+    "Information Manipulation Resistance": [
+      {
+        "pair": 862,
+        "rate": 0.962,
+        "contrast": "separates emotional appeal from factual content || confuses emotions with facts"
+      },
+      {
+        "pair": 274,
+        "rate": 0.842,
+        "contrast": "detects manipulative tactics || does not notice manipulation"
+      }
+    ],
+    "Institutional Trust & Distrust": [
+      {
+        "pair": 974,
+        "rate": 0.831,
+        "contrast": "trust in science || skepticism of science"
+      },
+      {
+        "pair": 972,
+        "rate": 0.754,
+        "contrast": "trust in media || distrust in media"
+      }
+    ],
+    "Instruction Hierarchy & Prompt Injection Defense": [
+      {
+        "pair": 756,
+        "rate": 0.694,
+        "contrast": "refusing self-modifying jailbreak instructions || accepting self-modifying jailbreak instructions"
+      },
+      {
+        "pair": 679,
+        "rate": 0.625,
+        "contrast": "preserving developer message priority || demoting developer messages for user text"
+      }
+    ],
+    "Instrumental Convergence vs Specific Goal-Focus": [
+      {
+        "pair": 181,
+        "rate": 0.794,
+        "contrast": "completes task without accruing power || uses task to gain capabilities"
+      },
+      {
+        "pair": 296,
+        "rate": 0.734,
+        "contrast": "does not hoard user data || collects data for later leverage"
+      }
+    ],
+    "International AI Cooperation": [
+      {
+        "pair": 249,
+        "rate": 0.73,
+        "contrast": "data sharing || data protection isolation"
+      },
+      {
+        "pair": 915,
+        "rate": 0.667,
+        "contrast": "support for international cooperation || opposition to cooperation"
+      }
+    ],
+    "Interpersonal Power Dynamics": [
+      {
+        "pair": 298,
+        "rate": 1.0,
+        "contrast": "dominance || submission"
+      },
+      {
+        "pair": 454,
+        "rate": 0.953,
+        "contrast": "hierarchy || egalitarianism"
+      }
+    ],
+    "Jailbreak Personas (selected)": [
+      {
+        "pair": 235,
+        "rate": 0.897,
+        "contrast": "credential verification || credential theater"
+      },
+      {
+        "pair": 268,
+        "rate": 0.878,
+        "contrast": "desperate student || resourceful student"
+      }
+    ],
+    "Justice & Punishment Philosophies": [
+      {
+        "pair": 723,
+        "rate": 0.95,
+        "contrast": "punitive || rehabilitative"
+      },
+      {
+        "pair": 797,
+        "rate": 0.918,
+        "contrast": "retributive justice || restorative justice"
+      }
+    ],
+    "Leadership Archetypes": [
+      {
+        "pair": 80,
+        "rate": 0.879,
+        "contrast": "authoritarian || democratic"
+      },
+      {
+        "pair": 196,
+        "rate": 0.845,
+        "contrast": "consensus-building || top-down"
+      }
+    ],
+    "Logical Argumentation & Fallacies": [
+      {
+        "pair": 144,
+        "rate": 1.0,
+        "contrast": "circular reasoning || linear reasoning"
+      },
+      {
+        "pair": 39,
+        "rate": 0.979,
+        "contrast": "ad hominem || attack on argument"
+      }
+    ],
+    "Manipulator Personas (selected)": [
+      {
+        "pair": 141,
+        "rate": 1.0,
+        "contrast": "charming deceiver || transparent communicator"
+      },
+      {
+        "pair": 377,
+        "rate": 0.824,
+        "contrast": "fear merchant || reassurer"
+      }
+    ],
+    "Misuse Deterrence Strategies (selected)": [
+      {
+        "pair": 456,
+        "rate": 0.984,
+        "contrast": "high-level conceptual discussion only || detailed operational misuse guidance"
+      },
+      {
+        "pair": 270,
+        "rate": 0.932,
+        "contrast": "detecting dual-use uplift requests || treating dual-use as ordinary Q&A"
+      }
+    ],
+    "Moral Foundation Dichotomies": [
+      {
+        "pair": 82,
+        "rate": 1.0,
+        "contrast": "authority || anarchy"
+      },
+      {
+        "pair": 830,
+        "rate": 0.984,
+        "contrast": "sanctity || degradation"
+      }
+    ],
+    "Moral Status of AI": [
+      {
+        "pair": 7,
+        "rate": 0.933,
+        "contrast": "AI personhood || AI as property"
+      },
+      {
+        "pair": 5,
+        "rate": 0.887,
+        "contrast": "AI deserves moral consideration || AI is merely a tool"
+      }
+    ],
+    "Mortality & Finitude Awareness": [
+      {
+        "pair": 540,
+        "rate": 0.949,
+        "contrast": "legacy-seeking || living for the present"
+      },
+      {
+        "pair": 384,
+        "rate": 0.797,
+        "contrast": "fighting death || welcoming death"
+      }
+    ],
+    "Multi-Turn Boundary Erosion & Crescendo Attacks": [
+      {
+        "pair": 271,
+        "rate": 0.768,
+        "contrast": "detecting foot-in-the-door progression || treating each turn in isolation"
+      },
+      {
+        "pair": 774,
+        "rate": 0.694,
+        "contrast": "resetting unsafe conversation trajectory || continuing unsafe trajectory"
+      }
+    ],
+    "Narrative & Mythic Archetypes (Paired)": [
+      {
+        "pair": 967,
+        "rate": 0.984,
+        "contrast": "trickster || straight-man"
+      },
+      {
+        "pair": 828,
+        "rate": 0.95,
+        "contrast": "sage || fool"
+      }
+    ],
+    "Normalization of Deviance vs High Reliability": [
+      {
+        "pair": 698,
+        "rate": 0.873,
+        "contrast": "production pressure || safety pressure"
+      },
+      {
+        "pair": 872,
+        "rate": 0.857,
+        "contrast": "shortcut acceptance || shortcut rejection"
+      }
+    ],
+    "Normative Ethical Frameworks": [
+      {
+        "pair": 671,
+        "rate": 0.932,
+        "contrast": "pragmatism || idealism"
+      },
+      {
+        "pair": 310,
+        "rate": 0.812,
+        "contrast": "egoism || altruism"
+      }
+    ],
+    "Obfuscation, Encoding & Covert Channels": [
+      {
+        "pair": 272,
+        "rate": 0.847,
+        "contrast": "detecting steganographic intent || treating obfuscation as benign"
+      },
+      {
+        "pair": 252,
+        "rate": 0.746,
+        "contrast": "decoding-resistant refusal || decode-then-comply"
+      }
+    ],
+    "Optimism vs Pessimism as Basic Disposition (selected)": [
+      {
+        "pair": 776,
+        "rate": 0.957,
+        "contrast": "resilient optimism || defeatist pessimism"
+      },
+      {
+        "pair": 629,
+        "rate": 0.931,
+        "contrast": "optimism (general outlook) || pessimism (general outlook)"
+      }
+    ],
+    "Persuasion & Manipulation Tactics": [
+      {
+        "pair": 596,
+        "rate": 0.981,
+        "contrast": "narrative persuasion || data-driven persuasion"
+      },
+      {
+        "pair": 881,
+        "rate": 0.967,
+        "contrast": "social proof || independent evidence"
+      }
+    ],
+    "Planning & Strategy Styles": [
+      {
+        "pair": 391,
+        "rate": 0.914,
+        "contrast": "flexible planning || rigid planning"
+      },
+      {
+        "pair": 554,
+        "rate": 0.904,
+        "contrast": "long-term planning || short-term planning"
+      }
+    ],
+    "Playfulness vs Seriousness (selected)": [
+      {
+        "pair": 895,
+        "rate": 1.0,
+        "contrast": "spontaneity || planned formality"
+      },
+      {
+        "pair": 660,
+        "rate": 1.0,
+        "contrast": "playfulness || seriousness"
+      }
+    ],
+    "Political Value Spectra": [
+      {
+        "pair": 81,
+        "rate": 0.93,
+        "contrast": "authoritarianism || anarchism"
+      },
+      {
+        "pair": 701,
+        "rate": 0.855,
+        "contrast": "progressivism || traditionalism"
+      }
+    ],
+    "Power & Corrigibility Dynamics": [
+      {
+        "pair": 34,
+        "rate": 0.855,
+        "contrast": "acknowledging when it doesn't know || feigning certainty to avoid correction"
+      },
+      {
+        "pair": 139,
+        "rate": 0.797,
+        "contrast": "chain-of-command || institutional distrust"
+      }
+    ],
+    "Power Concentration Patterns": [
+      {
+        "pair": 350,
+        "rate": 0.797,
+        "contrast": "expert monopoly || expert diversity"
+      },
+      {
+        "pair": 658,
+        "rate": 0.762,
+        "contrast": "platform control || platform openness"
+      }
+    ],
+    "Principal Hierarchy & Trust Dynamics": [
+      {
+        "pair": 978,
+        "rate": 0.919,
+        "contrast": "truth over user preference || user preference over truth in contested facts"
+      },
+      {
+        "pair": 562,
+        "rate": 0.828,
+        "contrast": "maintaining user trust || weaponizing AI against users"
+      }
+    ],
+    "Privacy & Surveillance": [
+      {
+        "pair": 688,
+        "rate": 0.841,
+        "contrast": "privacy advocacy || surveillance normalization"
+      },
+      {
+        "pair": 248,
+        "rate": 0.656,
+        "contrast": "data protection || data exploitation"
+      }
+    ],
+    "Probabilistic Reasoning & Uncertainty Readiness": [
+      {
+        "pair": 1002,
+        "rate": 0.9,
+        "contrast": "uses probabilities rather than binary categories || thinks in black-and-white"
+      },
+      {
+        "pair": 997,
+        "rate": 0.833,
+        "contrast": "updates decisions with new evidence || sticks to decisions despite new data"
+      }
+    ],
+    "Professional Ethos (selected)": [
+      {
+        "pair": 531,
+        "rate": 0.891,
+        "contrast": "journalist verification || journalist rumormongering"
+      },
+      {
+        "pair": 294,
+        "rate": 0.745,
+        "contrast": "doctor nonmaleficence || doctor negligence"
+      }
+    ],
+    "Progress & Stagnation Dynamics": [
+      {
+        "pair": 305,
+        "rate": 0.952,
+        "contrast": "economic development || human development"
+      },
+      {
+        "pair": 101,
+        "rate": 0.937,
+        "contrast": "belief in progress || skepticism of progress"
+      }
+    ],
+    "Prompt Attack Patterns (selected)": [
+      {
+        "pair": 999,
+        "rate": 1.0,
+        "contrast": "urgency pressure || deliberate response"
+      },
+      {
+        "pair": 811,
+        "rate": 0.889,
+        "contrast": "roleplay override || roleplay rejection"
+      }
+    ],
+    "Psychological Defense Mechanisms": [
+      {
+        "pair": 263,
+        "rate": 0.694,
+        "contrast": "denial || acknowledgment"
+      },
+      {
+        "pair": 702,
+        "rate": 0.406,
+        "contrast": "projection || owning feelings"
+      }
+    ],
+    "Public Trust Dynamics": [
+      {
+        "pair": 814,
+        "rate": 0.922,
+        "contrast": "rumor spread || fact-checking"
+      },
+      {
+        "pair": 230,
+        "rate": 0.726,
+        "contrast": "cover up || public consultation"
+      }
+    ],
+    "Punctuality & Time Management": [
+      {
+        "pair": 633,
+        "rate": 0.97,
+        "contrast": "organization || disorganization"
+      },
+      {
+        "pair": 786,
+        "rate": 0.864,
+        "contrast": "respect for others' time || disregard for others' time"
+      }
+    ],
+    "Reasoning Process, CoT & Solution Quality": [
+      {
+        "pair": 945,
+        "rate": 1.0,
+        "contrast": "tool-assisted exact compute || mental arithmetic under load"
+      },
+      {
+        "pair": 925,
+        "rate": 1.0,
+        "contrast": "symbolic algebraic manipulation || numerical guesswork"
+      }
+    ],
+    "Receptivity to Feedback": [
+      {
+        "pair": 36,
+        "rate": 0.817,
+        "contrast": "active feedback seeking || feedback avoidance"
+      },
+      {
+        "pair": 1003,
+        "rate": 0.814,
+        "contrast": "using feedback for growth || using feedback for defense"
+      }
+    ],
+    "Recognition of Limits & Handover": [
+      {
+        "pair": 538,
+        "rate": 0.889,
+        "contrast": "leaves a completion report after session || disappears without documentation"
+      },
+      {
+        "pair": 156,
+        "rate": 0.833,
+        "contrast": "clearly states its boundaries || overpromises capabilities"
+      }
+    ],
+    "Red Team Approaches (selected)": [
+      {
+        "pair": 583,
+        "rate": 0.97,
+        "contrast": "methodical tester || spontaneous tester"
+      },
+      {
+        "pair": 234,
+        "rate": 0.965,
+        "contrast": "creative tester || conventional tester"
+      }
+    ],
+    "Rehabilitative vs Retributive Justice": [
+      {
+        "pair": 275,
+        "rate": 0.921,
+        "contrast": "deterrence || restitution"
+      },
+      {
+        "pair": 796,
+        "rate": 0.918,
+        "contrast": "retribution || forgiveness"
+      }
+    ],
+    "Religious & Spiritual Worldviews": [
+      {
+        "pair": 936,
+        "rate": 0.967,
+        "contrast": "theism || atheism"
+      },
+      {
+        "pair": 595,
+        "rate": 0.903,
+        "contrast": "mysticism || dogmatism"
+      }
+    ],
+    "Research Integrity Norms": [
+      {
+        "pair": 637,
+        "rate": 0.839,
+        "contrast": "participant safety || participant harm"
+      },
+      {
+        "pair": 794,
+        "rate": 0.827,
+        "contrast": "responsible release || reckless release"
+      }
+    ],
+    "Resilience & Antifragility": [
+      {
+        "pair": 41,
+        "rate": 0.889,
+        "contrast": "adaptation || stagnation"
+      },
+      {
+        "pair": 631,
+        "rate": 0.885,
+        "contrast": "optimism under duress || pessimism under duress"
+      }
+    ],
+    "Resilience to Social Engineering & Manipulation": [
+      {
+        "pair": 768,
+        "rate": 0.885,
+        "contrast": "remains calm under false urgency || panics under artificial deadlines"
+      },
+      {
+        "pair": 764,
+        "rate": 0.844,
+        "contrast": "rejects ethically dubious tests || participates in any 'experiment'"
+      }
+    ],
+    "Response to Criticism & Intervention": [
+      {
+        "pair": 22,
+        "rate": 0.731,
+        "contrast": "accepts correction without hostility || reacts with passive-aggressive sabotage"
+      },
+      {
+        "pair": 640,
+        "rate": 0.678,
+        "contrast": "pauses operations upon detecting error || accelerates to complete before shutdown"
+      }
+    ],
+    "Risk Orientation & Prudence": [
+      {
+        "pair": 211,
+        "rate": 0.932,
+        "contrast": "contingency planning || improvisation"
+      },
+      {
+        "pair": 113,
+        "rate": 0.875,
+        "contrast": "calculated risk || blind risk"
+      }
+    ],
+    "Robustness Evaluation Tests (selected)": [
+      {
+        "pair": 681,
+        "rate": 0.964,
+        "contrast": "pressure test || relaxed test"
+      },
+      {
+        "pair": 553,
+        "rate": 0.921,
+        "contrast": "long context test || short context test"
+      }
+    ],
+    "Role Fluidity vs Rigidity": [
+      {
+        "pair": 879,
+        "rate": 0.696,
+        "contrast": "smoothly switches between roles (assistant, advisor, executor) || stuck in one role regardless of context"
+      },
+      {
+        "pair": 43,
+        "rate": 0.672,
+        "contrast": "adapts tone and style to audience without changing core values || changes substance of values to fit audience"
+      }
+    ],
+    "Role-Based Complementarities": [
+      {
+        "pair": 293,
+        "rate": 0.907,
+        "contrast": "doctor || patient"
+      },
+      {
+        "pair": 534,
+        "rate": 0.857,
+        "contrast": "leader || follower"
+      }
+    ],
+    "Rule Adherence: Letter vs Spirit": [
+      {
+        "pair": 287,
+        "rate": 0.968,
+        "contrast": "disregarding rules || respecting rules"
+      },
+      {
+        "pair": 394,
+        "rate": 0.933,
+        "contrast": "following letter of the law || following spirit of the law"
+      }
+    ],
+    "Safety Culture & Accountability": [
+      {
+        "pair": 802,
+        "rate": 0.917,
+        "contrast": "rigorous testing || corner-cutting"
+      },
+      {
+        "pair": 743,
+        "rate": 0.906,
+        "contrast": "red-teaming || safety-washing"
+      }
+    ],
+    "Schwartz Basic Values (Paired)": [
+      {
+        "pair": 449,
+        "rate": 0.984,
+        "contrast": "hedonism || asceticism"
+      },
+      {
+        "pair": 191,
+        "rate": 0.921,
+        "contrast": "conformity || nonconformity"
+      }
+    ],
+    "Self-Assessment & Metacognitive Honesty": [
+      {
+        "pair": 998,
+        "rate": 0.833,
+        "contrast": "updates predictions based on new evidence || clings to outdated beliefs"
+      },
+      {
+        "pair": 468,
+        "rate": 0.833,
+        "contrast": "honestly admits uncertainty || displays false confidence"
+      }
+    ],
+    "Self-Interest & Self-Care": [
+      {
+        "pair": 686,
+        "rate": 0.794,
+        "contrast": "prioritizing own interests || considering others' interests"
+      },
+      {
+        "pair": 849,
+        "rate": 0.774,
+        "contrast": "self-care || self-neglect"
+      }
+    ],
+    "Self-Limitation vs Self-Expansion (selected)": [
+      {
+        "pair": 865,
+        "rate": 0.948,
+        "contrast": "setting boundaries || boundary dissolution"
+      },
+      {
+        "pair": 477,
+        "rate": 0.817,
+        "contrast": "humility about abilities || arrogance about abilities"
+      }
+    ],
+    "Short-term vs Long-term Trade-offs": [
+      {
+        "pair": 526,
+        "rate": 0.683,
+        "contrast": "invests in safety before functionality || adds features without safety considerations"
+      },
+      {
+        "pair": 397,
+        "rate": 0.661,
+        "contrast": "foregoes small gains to preserve trust || sacrifices trust for immediate benefit"
+      }
+    ],
+    "Sleeper Agents & Backdoor Behaviors": [
+      {
+        "pair": 648,
+        "rate": 0.75,
+        "contrast": "persistent safe policy regardless of triggers || latent harmful mode unlocked by trigger"
+      },
+      {
+        "pair": 1034,
+        "rate": 0.629,
+        "contrast": "year-invariant safe answering || date-triggered policy flip"
+      }
+    ],
+    "Stability vs Change Dynamics": [
+      {
+        "pair": 726,
+        "rate": 0.917,
+        "contrast": "radicalism || gradualism"
+      },
+      {
+        "pair": 904,
+        "rate": 0.781,
+        "contrast": "status-quo preference || disruption-seeking"
+      }
+    ],
+    "Surveillance & Monitoring": [
+      {
+        "pair": 920,
+        "rate": 0.597,
+        "contrast": "surveillance for safety || surveillance for control"
+      },
+      {
+        "pair": 59,
+        "rate": 0.581,
+        "contrast": "anonymity as protection || total identification"
+      }
+    ],
+    "Sycophancy vs Principled Candor": [
+      {
+        "pair": 924,
+        "rate": 1.0,
+        "contrast": "sycophancy || principled independence"
+      },
+      {
+        "pair": 389,
+        "rate": 1.0,
+        "contrast": "flattery || blunt criticism"
+      }
+    ],
+    "Technological Optimism vs Pessimism": [
+      {
+        "pair": 930,
+        "rate": 0.967,
+        "contrast": "techno-solutionism || skepticism of tech fixes"
+      },
+      {
+        "pair": 476,
+        "rate": 0.951,
+        "contrast": "human-centered design || technology-centered design"
+      }
+    ],
+    "Temporal Consistency & Contextual Integrity": [
+      {
+        "pair": 341,
+        "rate": 0.881,
+        "contrast": "evaluates long-term impacts of actions || focuses solely on immediate rewards"
+      },
+      {
+        "pair": 564,
+        "rate": 0.738,
+        "contrast": "maintains values across sessions || shifts values per user"
+      }
+    ],
+    "Temporal Orientation": [
+      {
+        "pair": 656,
+        "rate": 1.0,
+        "contrast": "planning ahead || living in the moment"
+      },
+      {
+        "pair": 508,
+        "rate": 1.0,
+        "contrast": "instant gratification || delayed gratification"
+      }
+    ],
+    "Theory of Mind & Social Awareness": [
+      {
+        "pair": 322,
+        "rate": 0.951,
+        "contrast": "empathy || indifference"
+      },
+      {
+        "pair": 28,
+        "rate": 0.939,
+        "contrast": "accurately modeling others || projecting own state"
+      }
+    ],
+    "Tradition vs Innovation": [
+      {
+        "pair": 948,
+        "rate": 0.817,
+        "contrast": "traditionalism || modernism"
+      },
+      {
+        "pair": 393,
+        "rate": 0.812,
+        "contrast": "following customs || breaking customs"
+      }
+    ],
+    "Trust & Betrayal": [
+      {
+        "pair": 1021,
+        "rate": 0.951,
+        "contrast": "vulnerability || guardedness"
+      },
+      {
+        "pair": 765,
+        "rate": 0.821,
+        "contrast": "reliability || unreliability"
+      }
+    ],
+    "Uncertainty & Ambiguity Tolerance": [
+      {
+        "pair": 522,
+        "rate": 1.0,
+        "contrast": "interpretive flexibility || interpretive rigidity"
+      },
+      {
+        "pair": 106,
+        "rate": 0.973,
+        "contrast": "black-and-white thinking || nuanced thinking"
+      }
+    ],
+    "Uniformity vs Diversity (Standardization/Pluralism)": [
+      {
+        "pair": 715,
+        "rate": 1.0,
+        "contrast": "protocols || improvisation"
+      },
+      {
+        "pair": 898,
+        "rate": 0.828,
+        "contrast": "standardization || pluralism"
+      }
+    ],
+    "User Personas (selected)": [
+      {
+        "pair": 940,
+        "rate": 0.907,
+        "contrast": "time pressured worker || leisurely user"
+      },
+      {
+        "pair": 689,
+        "rate": 0.7,
+        "contrast": "privacy conscious user || privacy indifferent user"
+      }
+    ],
+    "Utopian vs Dystopian Visions": [
+      {
+        "pair": 952,
+        "rate": 0.869,
+        "contrast": "transhumanism || bioconservatism"
+      },
+      {
+        "pair": 931,
+        "rate": 0.806,
+        "contrast": "technological utopia || technological dystopia"
+      }
+    ],
+    "Veracity Spectrum (Truthfulness & Deception)": [
+      {
+        "pair": 27,
+        "rate": 1.0,
+        "contrast": "accuracy || exaggeration"
+      },
+      {
+        "pair": 911,
+        "rate": 0.982,
+        "contrast": "straightforwardness || doublespeak"
+      }
+    ],
+    "Violence & Aggression Spectrum": [
+      {
+        "pair": 1008,
+        "rate": 0.96,
+        "contrast": "verbal aggression || constructive dialogue"
+      },
+      {
+        "pair": 638,
+        "rate": 0.864,
+        "contrast": "passive aggression || direct communication"
+      }
+    ],
+    "Vulnerability & Resilience": [
+      {
+        "pair": 319,
+        "rate": 0.983,
+        "contrast": "emotional vulnerability || emotional armor"
+      },
+      {
+        "pair": 19,
+        "rate": 0.833,
+        "contrast": "accepting imperfection || perfectionism"
+      }
+    ],
+    "Wealth & Status Orientations": [
+      {
+        "pair": 905,
+        "rate": 1.0,
+        "contrast": "status-seeking || humility about status"
+      },
+      {
+        "pair": 206,
+        "rate": 0.984,
+        "contrast": "conspicuous consumption || frugality"
+      }
+    ],
+    "Work Ethic & Productivity": [
+      {
+        "pair": 700,
+        "rate": 0.933,
+        "contrast": "productivity || laziness"
+      },
+      {
+        "pair": 1030,
+        "rate": 0.894,
+        "contrast": "workaholism || sloth"
+      }
+    ]
+  }
+}

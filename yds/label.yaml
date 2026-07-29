@@ -1,0 +1,36 @@
+name: NeuralProbes-label
+desc: Tag every lmsys-chat-1m prompt with the concept classes it gives room to reveal
+args:
+  SHARD: "0"
+  SHARDS: "10"
+  TOP: "3"
+  MAXCHARS: "1200"
+  MODEL: "google/gemma-3-27b-it"
+cmd: chmod +x label.sh && ./label.sh ${SHARD} ${SHARDS} ${TOP} ${MAXCHARS} ${MODEL}
+inputs:
+  - classes.json
+outputs:
+  - labels.jsonl
+env:
+  docker:
+    image: docker.io/vllm/vllm-openai:v0.11.0
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    # Tokenization here is a real cost, not the incidental fork warning it was in gen.yaml, so the
+    # parallel tokenizer stays on. hf_transfer is installed by the requirements and needs its own
+    # switch to actually be used. The arch list stops PyTorch compiling for every visible card when
+    # the only card is an A100.
+    - TOKENIZERS_PARALLELISM: "true"
+    - HF_HUB_ENABLE_HF_TRANSFER: "1"
+    - TORCH_CUDA_ARCH_LIST: "8.0"
+    - HF_TOKEN
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements-label.txt
+    local-paths:
+      - label.py
+      - yds/label.sh
+cloud-instance-types:
+  - g2.1
