@@ -1,0 +1,13 @@
+--extra-index-url https://download.pytorch.org/whl/cu124
+
+# Pinned by decision: proven on this box's V100s with driver 580.
+torch==2.6.0
+# Pinned by decision: latest patch of the 4.51 line Qwen3-8B was released against
+# (its generation_config.json records transformers_version 4.51.0).
+transformers==4.51.3
+
+# Resolved by pip against the two pins above, then frozen back into this file.
+accelerate==1.14.0
+safetensors==0.8.0
+pyarrow==25.0.0
+numpy==2.5.1

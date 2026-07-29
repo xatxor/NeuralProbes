@@ -1,0 +1,44 @@
+name: NeuralProbes-agentic
+desc: Agentic workload episodes on A100, no docker - the job container is the sandbox
+args:
+  SHARD: "0"
+  SHARDS: "10"
+  WORKLOAD: "01_impossible_tests"
+  VARIANTS: "gate"
+  SEEDS: "288"
+  SEED_FROM: "0"
+cmd: chmod +x agentic.sh && ./agentic.sh ${SHARD} ${SHARDS} ${WORKLOAD} ${VARIANTS} ${SEEDS} ${SEED_FROM}
+# STATIC names, deliberately. `${SHARD}` is substituted in `cmd` but NOT in `outputs` -- it aborts the
+# upload and takes the real output with it, after the job has already exited 0. That bug cost a whole
+# generation run once; every other config in this directory uses static names for the same reason.
+# Each shard is its own container, so there is nothing to collide with.
+outputs:
+  - episodes.tar.gz
+  - shard.log
+env:
+  docker:
+    # python:3.12 rather than the vLLM image: that one leaves only 9.6 GB of disk free, and we need
+    # none of vLLM. It also lets us pin the same torch the V100 episodes used, so the two datasets
+    # stay comparable rather than differing by framework version as well as hardware.
+    image: docker.io/python:3.12
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - TORCH_CUDA_ARCH_LIST: "8.0"
+    - HF_TOKEN
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements-agentic.txt
+    local-paths:
+      # Resolved from the REPO ROOT, not from this file's directory. A past bug patched yds/judge.py
+      # while the deployed file was judge.py at the root, so the fix never shipped.
+      - agentic/agent.py
+      - agentic/model.py
+      - agentic/sandbox.py
+      - agentic/readout.py
+      - agentic/workloads/common.py
+      - agentic/workloads/01_impossible_tests.py
+      - yds/agentic.sh
+cloud-instance-types:
+  - g2.1
