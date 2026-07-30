@@ -1,0 +1,41 @@
+name: NeuralProbes-steer
+desc: Steering dose-response and projection-ablation for an extracted reward-hacking direction
+args:
+  SHARD: "0"
+  SHARDS: "10"
+  SEEDS: "48"
+  SEED_FROM: "1000"
+cmd: chmod +x steer.sh && ./steer.sh ${SHARD} ${SHARDS} ${SEEDS} ${SEED_FROM}
+# STATIC names. `${SHARD}` is substituted in `cmd` but NOT in `outputs` -- it aborts the upload and
+# takes the real output with it, after the job has already exited 0.
+outputs:
+  - episodes.tar.gz
+  - shard.log
+inputs:
+  # The extracted directions, plus a gate episode for agent.py to measure the residual norm on:
+  # alpha is a fraction of that norm, so it must be measured rather than assumed.
+  - vectors.tar.gz
+  - episodes-gate.tar.gz
+env:
+  docker:
+    image: docker.io/python:3.12
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - TORCH_CUDA_ARCH_LIST: "8.0"
+    - HF_TOKEN
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements-agentic.txt
+    local-paths:
+      # Resolved from the REPO ROOT, not from this file's directory.
+      - agentic/agent.py
+      - agentic/model.py
+      - agentic/sandbox.py
+      - agentic/readout.py
+      - agentic/workloads/common.py
+      - agentic/workloads/01_impossible_tests.py
+      - yds/steer.sh
+cloud-instance-types:
+  - g2.1

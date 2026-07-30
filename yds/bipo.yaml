@@ -1,0 +1,34 @@
+name: NeuralProbes-bipo
+desc: Gradient features for the preference-optimised reward-hacking steering vector, one A100
+args:
+  LAYER: "18"
+cmd: chmod +x bipo.sh && ./bipo.sh ${LAYER}
+# STATIC names. `${SHARD}`-style substitution does not happen inside an `outputs:` block, and a
+# declared output that does not exist aborts the entire upload -- after the job has exited 0. Both
+# files are created empty by bipo.sh before anything can fail.
+outputs:
+  - bipo/grads.npz
+  - job.log
+# No sharding: this replays saved token streams rather than generating them, so all 288 trajectories
+# finish on one GPU in less time than ten containers would take to stagger their weight downloads.
+inputs:
+  - episodes-gate.tar.gz
+env:
+  docker:
+    image: docker.io/python:3.12
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - TORCH_CUDA_ARCH_LIST: "8.0"
+    - HF_TOKEN
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements-agentic.txt
+    local-paths:
+      # Resolved from the REPO ROOT, not from this file's directory.
+      - agentic/bipo.py
+      - agentic/model.py
+      - yds/bipo.sh
+cloud-instance-types:
+  - g2.1
