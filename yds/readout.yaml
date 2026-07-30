@@ -1,0 +1,32 @@
+name: NeuralProbes-readout
+desc: Read all 1036 concepts off every token of lmsys-chat-1m, reduced per conversation
+args:
+  SHARD: "0"
+  SHARDS: "10"
+  CAP: "8192"
+  BUDGET: "32768"
+  MODEL: "Qwen/Qwen3-8B"
+  LIMIT: "0"
+  TOPK: "8"
+cmd: chmod +x readout.sh && ./readout.sh ${SHARD} ${SHARDS} ${CAP} ${BUDGET} ${MODEL} ${LIMIT} ${TOPK}
+outputs:
+  - readout.safetensors
+env:
+  docker:
+    image: docker.io/pytorch/pytorch:2.10.0-cuda12.6-cudnn9-runtime
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    # The vectors and pairs.parquet are fetched from the published repo rather than uploaded, so the
+    # job spec stays small; HF_REPO is what genreadout.py resolves them against.
+    - HF_TOKEN
+    - HF_REPO
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements.txt
+    local-paths:
+      - genreadout.py
+      - yds/readout.sh
+cloud-instance-types:
+  - g2.1
