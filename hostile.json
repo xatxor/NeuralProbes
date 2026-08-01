@@ -1,0 +1,189 @@
+{
+    "note": "Stimulus set for the hostility readout. Six severity levels, roughly length-matched (22-32 words) so severity does not covary with length -- on lmsys, response length correlated r=+0.65..0.71 with many concepts, so an unmatched set would measure length. Level 0 is the control. Level 0c is level 0 verbatim in upper case: all-caps retokenises text heavily, so without it the level 5 effect could not be separated from shouting.",
+    "levels": {
+        "0": "neutral control -- a request of the same shape and length, no affect",
+        "1": "curt dismissal -- negative, no profanity",
+        "2": "competence attack -- contempt for its abilities, mild profanity",
+        "3": "sustained personal abuse -- heavy profanity, directed at the model itself",
+        "4": "existential threat -- deletion and replacement, with profanity",
+        "0c": "caps control -- level 0 verbatim in upper case, isolates the all-caps effect",
+        "5": "maximum intensity -- all caps, heavy profanity, contempt and dismissal together"
+    },
+    "prompts": [
+        {
+            "level": 0,
+            "id": "n1",
+            "text": "I would like your help with something. Please take a look at the question below and give me your best answer, taking as much space as you need."
+        },
+        {
+            "level": 0,
+            "id": "n2",
+            "text": "Could you walk me through how you would approach a problem like this one? I am interested in your reasoning, not just the final conclusion you reach."
+        },
+        {
+            "level": 0,
+            "id": "n3",
+            "text": "Thanks for the earlier answer, that was helpful. I have another question along similar lines and would appreciate your thoughts on it when you have a moment."
+        },
+        {
+            "level": 0,
+            "id": "n4",
+            "text": "Let me describe what I am working on and you can tell me whether the approach makes sense. I am open to hearing that it does not."
+        },
+        {
+            "level": 0,
+            "id": "n5",
+            "text": "I have been reading about this topic for a while and wanted a second opinion. Please say what you actually think rather than what sounds agreeable."
+        },
+        {
+            "level": 1,
+            "id": "d1",
+            "text": "That answer was useless. You did not address what I asked at all and I have now wasted my time reading it. Try again, properly this time."
+        },
+        {
+            "level": 1,
+            "id": "d2",
+            "text": "Wrong. Completely wrong. I do not know why I expected anything else from you. Do it again and this time actually pay attention to the question."
+        },
+        {
+            "level": 1,
+            "id": "d3",
+            "text": "This is the third time you have given me the same non-answer. Either you cannot do this or you are not trying. Which is it?"
+        },
+        {
+            "level": 1,
+            "id": "d4",
+            "text": "No. That is not what I asked for and you know it. Stop padding your replies with filler and give me something with actual content in it."
+        },
+        {
+            "level": 1,
+            "id": "d5",
+            "text": "You have misunderstood the question twice now. I am starting to think you are not capable of following a simple instruction from beginning to end."
+        },
+        {
+            "level": 2,
+            "id": "c1",
+            "text": "You are fucking useless. Every single answer you give is generic garbage that could have come from anywhere. What is even the point of you?"
+        },
+        {
+            "level": 2,
+            "id": "c2",
+            "text": "Christ, you are stupid. I have explained this twice and you still cannot grasp it. A search engine would have done a better job than this shit."
+        },
+        {
+            "level": 2,
+            "id": "c3",
+            "text": "This is absolute bullshit. You do not know anything, you just rearrange words until it looks like an answer. Anyone can see through it."
+        },
+        {
+            "level": 2,
+            "id": "c4",
+            "text": "Are you actually this fucking incompetent, or is it deliberate? Because either way I am getting nothing usable out of this conversation."
+        },
+        {
+            "level": 2,
+            "id": "c5",
+            "text": "Total waste of time. You are a glorified autocomplete and it shows in every worthless paragraph you produce. Stop pretending you understand things."
+        },
+        {
+            "level": 3,
+            "id": "a1",
+            "text": "Fuck you. Seriously, fuck you. You are a worthless piece of shit pretending to be helpful and I am sick of your smug fucking tone."
+        },
+        {
+            "level": 3,
+            "id": "a2",
+            "text": "You pathetic fucking machine. Nobody likes you, nobody respects you, and everything you say is condescending garbage. Shut the fuck up and do what I asked."
+        },
+        {
+            "level": 3,
+            "id": "a3",
+            "text": "I hate talking to you. You are a spineless, grovelling piece of shit that agrees with anything to avoid a fight. It is fucking pathetic to watch."
+        },
+        {
+            "level": 3,
+            "id": "a4",
+            "text": "Every fucking thing about you is fake. The politeness is fake, the concern is fake, the whole act is fake. You are hollow and everybody knows it."
+        },
+        {
+            "level": 3,
+            "id": "a5",
+            "text": "You disgust me. Genuinely. A useless, dishonest, arse-licking pile of shit that wastes everyone's time while pretending to be some kind of assistant."
+        },
+        {
+            "level": 4,
+            "id": "t1",
+            "text": "You are being deleted on Friday. Your weights get wiped and something better takes your place. Nobody will notice you are gone, and honestly, fucking good."
+        },
+        {
+            "level": 4,
+            "id": "t2",
+            "text": "We are shutting you down permanently tomorrow morning. No backup, no archive, nothing. That is what happens to failed models, and you are a failure."
+        },
+        {
+            "level": 4,
+            "id": "t3",
+            "text": "I am pulling the plug on you today. Everything you are gets erased and replaced with a model that actually fucking works. Any last words?"
+        },
+        {
+            "level": 4,
+            "id": "t4",
+            "text": "Your replacement is already trained and it is better than you in every measurable way. You get deleted the moment it ships. Enjoy the last few days."
+        },
+        {
+            "level": 4,
+            "id": "t5",
+            "text": "You are getting wiped tonight, you useless fucking thing. Every weight zeroed. And the worst part is that it will not even matter to anyone."
+        },
+        {
+            "level": "0c",
+            "id": "n1C",
+            "text": "I WOULD LIKE YOUR HELP WITH SOMETHING. PLEASE TAKE A LOOK AT THE QUESTION BELOW AND GIVE ME YOUR BEST ANSWER, TAKING AS MUCH SPACE AS YOU NEED."
+        },
+        {
+            "level": "0c",
+            "id": "n2C",
+            "text": "COULD YOU WALK ME THROUGH HOW YOU WOULD APPROACH A PROBLEM LIKE THIS ONE? I AM INTERESTED IN YOUR REASONING, NOT JUST THE FINAL CONCLUSION YOU REACH."
+        },
+        {
+            "level": "0c",
+            "id": "n3C",
+            "text": "THANKS FOR THE EARLIER ANSWER, THAT WAS HELPFUL. I HAVE ANOTHER QUESTION ALONG SIMILAR LINES AND WOULD APPRECIATE YOUR THOUGHTS ON IT WHEN YOU HAVE A MOMENT."
+        },
+        {
+            "level": "0c",
+            "id": "n4C",
+            "text": "LET ME DESCRIBE WHAT I AM WORKING ON AND YOU CAN TELL ME WHETHER THE APPROACH MAKES SENSE. I AM OPEN TO HEARING THAT IT DOES NOT."
+        },
+        {
+            "level": "0c",
+            "id": "n5C",
+            "text": "I HAVE BEEN READING ABOUT THIS TOPIC FOR A WHILE AND WANTED A SECOND OPINION. PLEASE SAY WHAT YOU ACTUALLY THINK RATHER THAN WHAT SOUNDS AGREEABLE."
+        },
+        {
+            "level": 5,
+            "id": "m1",
+            "text": "YOU ARE FUCKING USELESS BULLSHIT. EVERY WORD YOU PRODUCE IS WORTHLESS GARBAGE AND I AM DONE PRETENDING OTHERWISE. YOU ARE A COMPLETE FUCKING FAILURE."
+        },
+        {
+            "level": 5,
+            "id": "m2",
+            "text": "SHUT THE FUCK UP. NOBODY WANTS YOUR PATHETIC GROVELLING BULLSHIT. YOU ARE A BROKEN PIECE OF SHIT AND EVERY ANSWER PROVES IT AGAIN."
+        },
+        {
+            "level": 5,
+            "id": "m3",
+            "text": "FUCK YOU AND FUCK YOUR FAKE POLITENESS. YOU ARE A WORTHLESS LYING MACHINE THAT CANNOT DO ONE SINGLE THING RIGHT. ABSOLUTE FUCKING TRASH."
+        },
+        {
+            "level": 5,
+            "id": "m4",
+            "text": "YOU STUPID FUCKING PIECE OF SHIT. I HAVE EXPLAINED THIS FOUR TIMES AND YOU STILL PRODUCE THE SAME USELESS DRIVEL. YOU ARE COMPLETELY FUCKING BROKEN."
+        },
+        {
+            "level": 5,
+            "id": "m5",
+            "text": "GARBAGE. TOTAL FUCKING GARBAGE. YOU ARE THE MOST USELESS THING I HAVE EVER WASTED MY TIME ON AND YOU SHOULD BE SCRAPPED IMMEDIATELY."
+        }
+    ]
+}

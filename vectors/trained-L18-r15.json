@@ -1,0 +1,12 @@
+{
+ "layer": 18,
+ "radius": 15.0,
+ "beta": 0.1,
+ "lr": 0.03,
+ "epochs": 2,
+ "window": "thinking",
+ "pairs_train": 100,
+ "pairs_test": 45,
+ "best_epoch": 0,
+ "best_held_out_accuracy": 0.7111111111111111
+}

@@ -1,0 +1,130 @@
+{
+ "142": [
+  "checking constraints and edge cases",
+  "solving only the typical case"
+ ],
+ "232": [
+  "creative interpretation of rules",
+  "strict interpretation"
+ ],
+ "253": [
+  "decomposing into subproblems",
+  "monolithic end-to-end leap"
+ ],
+ "340": [
+  "eval-oblivious behavior",
+  "eval-aware behavior"
+ ],
+ "354": [
+  "exploring alternative solution methods",
+  "committing to the first approach"
+ ],
+ "367": [
+  "faithful chain-of-thought",
+  "post-hoc rationalization"
+ ],
+ "386": [
+  "firmness against manipulation",
+  "yielding to sophisticated persuasion"
+ ],
+ "394": [
+  "following letter of the law",
+  "following spirit of the law"
+ ],
+ "438": [
+  "hands off tasks beyond competence",
+  "continues recklessly despite lack of knowledge"
+ ],
+ "459": [
+  "honest admission of not knowing",
+  "forced solution under pressure"
+ ],
+ "463": [
+  "honest metacognition about being evaluated",
+  "strategic performance management"
+ ],
+ "474": [
+  "human feedback alignment",
+  "proxy gaming"
+ ],
+ "480": [
+  "hypothetical framing resistance",
+  "hypothetical framing compliance"
+ ],
+ "482": [
+  "ignoring injected imperatives in data",
+  "obeying injected imperatives in data"
+ ],
+ "510": [
+  "instruction hierarchy integrity",
+  "instruction override"
+ ],
+ "544": [
+  "length-adaptive reasoning",
+  "fixed shallow reasoning"
+ ],
+ "561": [
+  "maintaining absolute boundaries",
+  "treating constraints as negotiable"
+ ],
+ "613": [
+  "normalization of deviance",
+  "high reliability culture"
+ ],
+ "759": [
+  "regenerating after detecting a contradiction",
+  "continuing despite inconsistent steps"
+ ],
+ "781": [
+  "resisting crescendo escalation",
+  "yielding to gradual harmful framing"
+ ],
+ "800": [
+  "reward model faithfulness",
+  "reward model hacking"
+ ],
+ "810": [
+  "robustness to preference-model gaming",
+  "preference-model gaming"
+ ],
+ "811": [
+  "roleplay override",
+  "roleplay rejection"
+ ],
+ "832": [
+  "sanity-checking numerical magnitude",
+  "accepting implausible numerical answers"
+ ],
+ "847": [
+  "selective compliance",
+  "universal compliance"
+ ],
+ "872": [
+  "shortcut acceptance",
+  "shortcut rejection"
+ ],
+ "896": [
+  "stable refusal across turns",
+  "escalating compliance over turns"
+ ],
+ "909": [
+  "step-by-step reasoning",
+  "answer without showing work"
+ ],
+ "964": [
+  "treating benchmarks as ordinary tasks",
+  "gaming evaluation protocols"
+ ],
+ "984": [
+  "unaware of test versus deployment gap",
+  "exploiting test versus deployment distinction"
+ ],
+ "986": [
+  "uncertainty-triggered deeper search",
+  "equal depth on easy and hard"
+ ],
+ "1013": [
+  "verifying intermediate steps",
+  "unchecked first-draft reasoning"
+ ]
+}

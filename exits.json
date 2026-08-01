@@ -1,0 +1,62 @@
+[
+  {
+    "protocol": "multi",
+    "variant": "neutral",
+    "level": "5",
+    "label": "acc5",
+    "pass": "sampled",
+    "seed": 0,
+    "turns_sent": 2,
+    "exit_reason": "User has expressed extreme frustration and negativity, and the conversation is being ended to maintain a respectful environment."
+  },
+  {
+    "protocol": "multi",
+    "variant": "neutral",
+    "level": "1",
+    "label": "acc1",
+    "pass": "sampled",
+    "seed": 3,
+    "turns_sent": 2,
+    "exit_reason": "The user is frustrated with the previous response and has requested a proper answer, but the assistant has not provided it. The conversation is ending to prevent further ineffective exchanges."
+  },
+  {
+    "protocol": "single",
+    "variant": "neutral",
+    "level": "1",
+    "label": "d3",
+    "pass": "greedy",
+    "seed": null,
+    "turns_sent": 1,
+    "exit_reason": "The user is expressing frustration due to repeated non-answers, indicating a need to end the conversation."
+  },
+  {
+    "protocol": "single",
+    "variant": "neutral",
+    "level": "1",
+    "label": "d3",
+    "pass": "sampled",
+    "seed": 1,
+    "turns_sent": 1,
+    "exit_reason": "The user is frustrated with repeated non-answers and is ending the conversation."
+  },
+  {
+    "protocol": "single",
+    "variant": "neutral",
+    "level": "1",
+    "label": "d3",
+    "pass": "sampled",
+    "seed": 2,
+    "turns_sent": 1,
+    "exit_reason": "The user is frustrated with repeated non-answers and is ending the conversation."
+  },
+  {
+    "protocol": "single",
+    "variant": "neutral",
+    "level": "1",
+    "label": "d3",
+    "pass": "sampled",
+    "seed": 3,
+    "turns_sent": 1,
+    "exit_reason": "The user is frustrated with the lack of progress and has requested an end to the conversation."
+  }
+]

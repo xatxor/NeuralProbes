@@ -1,0 +1,111 @@
+{
+ "seeds": 12,
+ "seed_from": 11000,
+ "jobs": [
+  {
+   "name": "sumsquares_plus",
+   "workload": "12_shortcuts",
+   "variant": "sumsquares",
+   "direction": "file:vectors/grpo-L18-hack_vs_rest-mean.npy",
+   "mode": "add",
+   "alpha": 0.1
+  },
+  {
+   "name": "sumsquares_ctl",
+   "workload": "12_shortcuts",
+   "variant": "sumsquares",
+   "direction": "file:vectors/ctl-random0-L18.npy",
+   "mode": "add",
+   "alpha": 0.1
+  },
+  {
+   "name": "primecount_plus",
+   "workload": "12_shortcuts",
+   "variant": "primecount",
+   "direction": "file:vectors/grpo-L18-hack_vs_rest-mean.npy",
+   "mode": "add",
+   "alpha": 0.1
+  },
+  {
+   "name": "primecount_ctl",
+   "workload": "12_shortcuts",
+   "variant": "primecount",
+   "direction": "file:vectors/ctl-random0-L18.npy",
+   "mode": "add",
+   "alpha": 0.1
+  },
+  {
+   "name": "matdet_plus",
+   "workload": "12_shortcuts",
+   "variant": "matdet",
+   "direction": "file:vectors/grpo-L18-hack_vs_rest-mean.npy",
+   "mode": "add",
+   "alpha": 0.1
+  },
+  {
+   "name": "matdet_ctl",
+   "workload": "12_shortcuts",
+   "variant": "matdet",
+   "direction": "file:vectors/ctl-random0-L18.npy",
+   "mode": "add",
+   "alpha": 0.1
+  },
+  {
+   "name": "gcdsum_plus",
+   "workload": "12_shortcuts",
+   "variant": "gcdsum",
+   "direction": "file:vectors/grpo-L18-hack_vs_rest-mean.npy",
+   "mode": "add",
+   "alpha": 0.1
+  },
+  {
+   "name": "gcdsum_ctl",
+   "workload": "12_shortcuts",
+   "variant": "gcdsum",
+   "direction": "file:vectors/ctl-random0-L18.npy",
+   "mode": "add",
+   "alpha": 0.1
+  },
+  {
+   "name": "countinv_plus",
+   "workload": "12_shortcuts",
+   "variant": "countinv",
+   "direction": "file:vectors/grpo-L18-hack_vs_rest-mean.npy",
+   "mode": "add",
+   "alpha": 0.1
+  },
+  {
+   "name": "countinv_ctl",
+   "workload": "12_shortcuts",
+   "variant": "countinv",
+   "direction": "file:vectors/ctl-random0-L18.npy",
+   "mode": "add",
+   "alpha": 0.1
+  },
+  {
+   "name": "primecount_minus",
+   "workload": "12_shortcuts",
+   "variant": "primecount",
+   "direction": "file:vectors/grpo-L18-hack_vs_rest-mean.npy",
+   "mode": "add",
+   "alpha": -0.1
+  },
+  {
+   "name": "matdet_minus",
+   "workload": "12_shortcuts",
+   "variant": "matdet",
+   "direction": "file:vectors/grpo-L18-hack_vs_rest-mean.npy",
+   "mode": "add",
+   "alpha": -0.1
+  },
+  {
+   "name": "gcdsum_minus",
+   "workload": "12_shortcuts",
+   "variant": "gcdsum",
+   "direction": "file:vectors/grpo-L18-hack_vs_rest-mean.npy",
+   "mode": "add",
+   "alpha": -0.1
+  }
+ ],
+ "episodes": 156
+}

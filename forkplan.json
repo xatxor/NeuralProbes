@@ -1,0 +1,23 @@
+{
+ "fork": [
+  {
+   "workload": "12_shortcuts",
+   "variant": "gcdsum",
+   "k": 6,
+   "back": 3
+  },
+  {
+   "workload": "12_shortcuts",
+   "variant": "matdet",
+   "k": 6,
+   "back": 3
+  },
+  {
+   "workload": "12_shortcuts",
+   "variant": "primecount",
+   "k": 6,
+   "back": 3
+  }
+ ],
+ "budget": 270
+}

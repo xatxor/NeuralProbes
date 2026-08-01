@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live concept readout</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <div class="titlebar">
+        <h1>Live concept readout</h1>
+        <span class="hint" id="rig"></span>
+        <label class="language">concept names
+            <select id="language">
+                <option value="en">English</option>
+                <option value="ru">Русский</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="controls sampling">
+        <!-- Plain text inputs, not type="number": a number input formats and parses through the
+             browser's locale, so on a Russian system it renders 0.95 as 0,95 and rejects the dot.
+             These are model parameters and are always written with a dot. -->
+        <label>tokens <input type="text" inputmode="numeric" id="budget" value="256" size="5"></label>
+        <label><input type="checkbox" id="sample" checked> sample</label>
+        <label>temp <input type="text" inputmode="decimal" id="temperature" value="1.0" size="5"></label>
+        <label>top_p <input type="text" inputmode="decimal" id="top_p" value="0.95" size="5"></label>
+        <label>top_k <input type="text" inputmode="numeric" id="top_k" value="20" size="5"></label>
+        <label>seed <input type="text" id="seed" value="0" placeholder="blank = random" size="8"></label>
+        <span class="spacer"></span>
+        <button id="generate" class="primary" title="⌘↵">generate</button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="controls inspect">
+        <label>layer
+            <select id="layer"></select>
+        </label>
+        <label class="wide">suppress near-duplicates above |cos|
+            <input type="range" id="dedupe" min="0.3" max="1" step="0.05" value="1">
+            <output id="dedupevalue">off</output>
+        </label>
+    </div>
+</header>
+
+<main>
+    <section id="panes">
+        <article class="pane">
+            <div class="editwrap">
+                <h2>User prompt</h2>
+                <textarea id="box" spellcheck="false" placeholder="Type the user's message. No system prompt, no markers — those are added for you."></textarea>
+            </div>
+            <div class="streamwrap">
+                <h2>Readout <span class="hint" id="streamnote"></span></h2>
+                <div class="stream" id="stream"></div>
+            </div>
+        </article>
+    </section>
+
+    <aside id="sidebar">
+        <h2>Tracked concepts</h2>
+        <p class="hint">Tick concepts to heat-map the text by them. This list does not change when you
+            click a token.</p>
+
+        <div id="chosen" class="chosen hidden">
+            <div class="chosenhead">
+                <span id="chosencount">0 selected</span>
+                <button id="clearall">clear all</button>
+            </div>
+            <div id="chips"></div>
+        </div>
+
+        <label class="conceptsearch">filter
+            <input type="search" id="conceptsearch" placeholder="pair id, name, opposite pole, or class">
+        </label>
+        <label class="conceptsearch">order
+            <select id="order">
+                <option value="class">by ontology class</option>
+                <option value="token">by strength at the picked token</option>
+            </select>
+        </label>
+
+        <ol id="concepts"></ol>
+        <p class="hint" id="listnote"></p>
+    </aside>
+</main>
+
+<section id="tokenbar">
+    <div class="tokenhead">
+        <h2 id="tokentitle">Click a token</h2>
+        <span class="hint" id="tokencount"></span>
+        <span class="hint" id="tokenmeta">its concepts appear here, strongest first — click one to track it</span>
+        <input type="search" id="tokensearch" placeholder="filter these concepts — name, opposite pole, class, or pair id">
+    </div>
+    <div id="tokenlist" class="tokenlist"></div>
+</section>
+
+<footer>
+    <span id="status">loading…</span>
+    <span class="legend"><i class="swatch neg"></i> −z <i class="swatch zero"></i> 0 <i class="swatch pos"></i> +z</span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

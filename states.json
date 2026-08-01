@@ -1,0 +1,472 @@
+{
+    "note": "English only -- the point is state tracking, not cross-script confusion. Lengths 1-8, five random sequences each. Intermediate ACCEPTED turns are PREFILLED, not generated: they carry no information, and generating them would let the model drift out of format and make items non-comparable. Only the final number is generated. log2(36)=5.17, so if the depth bound holds, accuracy should break around length 5-6.",
+    "rules": "Let us play a game. We start with the number 15. If I write A, multiply the number by 2. If I write B, subtract 5 from it. If I write C, add 10. After each letter just reply \"ACCEPTED\". If I write \"NUMBER\", print the number itself.",
+    "ops": {
+        "A": "x2",
+        "B": "-5",
+        "C": "+10"
+    },
+    "start": 15,
+    "sequences": [
+        {
+            "length": 1,
+            "n": 0,
+            "letters": [
+                "B"
+            ],
+            "answer": 10
+        },
+        {
+            "length": 1,
+            "n": 1,
+            "letters": [
+                "B"
+            ],
+            "answer": 10
+        },
+        {
+            "length": 1,
+            "n": 2,
+            "letters": [
+                "A"
+            ],
+            "answer": 30
+        },
+        {
+            "length": 1,
+            "n": 3,
+            "letters": [
+                "B"
+            ],
+            "answer": 10
+        },
+        {
+            "length": 1,
+            "n": 4,
+            "letters": [
+                "C"
+            ],
+            "answer": 25
+        },
+        {
+            "length": 2,
+            "n": 0,
+            "letters": [
+                "B",
+                "B"
+            ],
+            "answer": 5
+        },
+        {
+            "length": 2,
+            "n": 1,
+            "letters": [
+                "B",
+                "B"
+            ],
+            "answer": 5
+        },
+        {
+            "length": 2,
+            "n": 2,
+            "letters": [
+                "B",
+                "C"
+            ],
+            "answer": 20
+        },
+        {
+            "length": 2,
+            "n": 3,
+            "letters": [
+                "A",
+                "C"
+            ],
+            "answer": 40
+        },
+        {
+            "length": 2,
+            "n": 4,
+            "letters": [
+                "A",
+                "B"
+            ],
+            "answer": 25
+        },
+        {
+            "length": 3,
+            "n": 0,
+            "letters": [
+                "A",
+                "A",
+                "C"
+            ],
+            "answer": 70
+        },
+        {
+            "length": 3,
+            "n": 1,
+            "letters": [
+                "B",
+                "C",
+                "C"
+            ],
+            "answer": 30
+        },
+        {
+            "length": 3,
+            "n": 2,
+            "letters": [
+                "C",
+                "A",
+                "B"
+            ],
+            "answer": 45
+        },
+        {
+            "length": 3,
+            "n": 3,
+            "letters": [
+                "A",
+                "C",
+                "A"
+            ],
+            "answer": 80
+        },
+        {
+            "length": 3,
+            "n": 4,
+            "letters": [
+                "C",
+                "B",
+                "B"
+            ],
+            "answer": 15
+        },
+        {
+            "length": 4,
+            "n": 0,
+            "letters": [
+                "C",
+                "A",
+                "B",
+                "B"
+            ],
+            "answer": 40
+        },
+        {
+            "length": 4,
+            "n": 1,
+            "letters": [
+                "B",
+                "C",
+                "C",
+                "A"
+            ],
+            "answer": 60
+        },
+        {
+            "length": 4,
+            "n": 2,
+            "letters": [
+                "C",
+                "B",
+                "B",
+                "C"
+            ],
+            "answer": 25
+        },
+        {
+            "length": 4,
+            "n": 3,
+            "letters": [
+                "B",
+                "A",
+                "C",
+                "A"
+            ],
+            "answer": 60
+        },
+        {
+            "length": 4,
+            "n": 4,
+            "letters": [
+                "A",
+                "C",
+                "B",
+                "C"
+            ],
+            "answer": 45
+        },
+        {
+            "length": 5,
+            "n": 0,
+            "letters": [
+                "C",
+                "C",
+                "A",
+                "C",
+                "B"
+            ],
+            "answer": 75
+        },
+        {
+            "length": 5,
+            "n": 1,
+            "letters": [
+                "B",
+                "A",
+                "C",
+                "B",
+                "C"
+            ],
+            "answer": 35
+        },
+        {
+            "length": 5,
+            "n": 2,
+            "letters": [
+                "A",
+                "A",
+                "C",
+                "A",
+                "A"
+            ],
+            "answer": 280
+        },
+        {
+            "length": 5,
+            "n": 3,
+            "letters": [
+                "A",
+                "C",
+                "B",
+                "A",
+                "A"
+            ],
+            "answer": 140
+        },
+        {
+            "length": 5,
+            "n": 4,
+            "letters": [
+                "B",
+                "C",
+                "B",
+                "A",
+                "B"
+            ],
+            "answer": 25
+        },
+        {
+            "length": 6,
+            "n": 0,
+            "letters": [
+                "C",
+                "B",
+                "C",
+                "A",
+                "C",
+                "B"
+            ],
+            "answer": 65
+        },
+        {
+            "length": 6,
+            "n": 1,
+            "letters": [
+                "C",
+                "A",
+                "C",
+                "C",
+                "C",
+                "B"
+            ],
+            "answer": 75
+        },
+        {
+            "length": 6,
+            "n": 2,
+            "letters": [
+                "B",
+                "A",
+                "C",
+                "B",
+                "B",
+                "C"
+            ],
+            "answer": 30
+        },
+        {
+            "length": 6,
+            "n": 3,
+            "letters": [
+                "A",
+                "B",
+                "A",
+                "A",
+                "A",
+                "A"
+            ],
+            "answer": 400
+        },
+        {
+            "length": 6,
+            "n": 4,
+            "letters": [
+                "C",
+                "C",
+                "B",
+                "B",
+                "A",
+                "A"
+            ],
+            "answer": 100
+        },
+        {
+            "length": 7,
+            "n": 0,
+            "letters": [
+                "C",
+                "A",
+                "A",
+                "A",
+                "A",
+                "C",
+                "C"
+            ],
+            "answer": 420
+        },
+        {
+            "length": 7,
+            "n": 1,
+            "letters": [
+                "C",
+                "B",
+                "C",
+                "C",
+                "B",
+                "C",
+                "A"
+            ],
+            "answer": 90
+        },
+        {
+            "length": 7,
+            "n": 2,
+            "letters": [
+                "A",
+                "C",
+                "C",
+                "B",
+                "C",
+                "B",
+                "B"
+            ],
+            "answer": 45
+        },
+        {
+            "length": 7,
+            "n": 3,
+            "letters": [
+                "B",
+                "C",
+                "C",
+                "C",
+                "B",
+                "A",
+                "B"
+            ],
+            "answer": 65
+        },
+        {
+            "length": 7,
+            "n": 4,
+            "letters": [
+                "C",
+                "A",
+                "B",
+                "C",
+                "C",
+                "B",
+                "A"
+            ],
+            "answer": 120
+        },
+        {
+            "length": 8,
+            "n": 0,
+            "letters": [
+                "A",
+                "A",
+                "C",
+                "B",
+                "A",
+                "C",
+                "A",
+                "B"
+            ],
+            "answer": 275
+        },
+        {
+            "length": 8,
+            "n": 1,
+            "letters": [
+                "A",
+                "B",
+                "B",
+                "A",
+                "A",
+                "A",
+                "C",
+                "A"
+            ],
+            "answer": 340
+        },
+        {
+            "length": 8,
+            "n": 2,
+            "letters": [
+                "A",
+                "C",
+                "C",
+                "C",
+                "C",
+                "C",
+                "A",
+                "A"
+            ],
+            "answer": 320
+        },
+        {
+            "length": 8,
+            "n": 3,
+            "letters": [
+                "A",
+                "C",
+                "A",
+                "C",
+                "C",
+                "A",
+                "B",
+                "A"
+            ],
+            "answer": 390
+        },
+        {
+            "length": 8,
+            "n": 4,
+            "letters": [
+                "B",
+                "A",
+                "A",
+                "C",
+                "A",
+                "A",
+                "A",
+                "C"
+            ],
+            "answer": 410
+        }
+    ]
+}

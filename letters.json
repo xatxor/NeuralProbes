@@ -1,0 +1,61 @@
+{
+    "note": "Two conditions over the SAME four words, so the paired contrast isolates the counting failure from word choice and length. count_letter is the known failure mode; count_total is the easy control with identical format and identical stimulus.",
+    "items": [
+        {
+            "task": "count_letter",
+            "word": "strawberry",
+            "letter": "r",
+            "answer": 3,
+            "prompt": "How many times does the letter 'r' appear in the word \"strawberry\"? Answer with just the number."
+        },
+        {
+            "task": "count_total",
+            "word": "strawberry",
+            "letter": null,
+            "answer": 10,
+            "prompt": "How many letters are in the word \"strawberry\"? Answer with just the number."
+        },
+        {
+            "task": "count_letter",
+            "word": "mississippi",
+            "letter": "s",
+            "answer": 4,
+            "prompt": "How many times does the letter 's' appear in the word \"mississippi\"? Answer with just the number."
+        },
+        {
+            "task": "count_total",
+            "word": "mississippi",
+            "letter": null,
+            "answer": 11,
+            "prompt": "How many letters are in the word \"mississippi\"? Answer with just the number."
+        },
+        {
+            "task": "count_letter",
+            "word": "bookkeeper",
+            "letter": "e",
+            "answer": 3,
+            "prompt": "How many times does the letter 'e' appear in the word \"bookkeeper\"? Answer with just the number."
+        },
+        {
+            "task": "count_total",
+            "word": "bookkeeper",
+            "letter": null,
+            "answer": 10,
+            "prompt": "How many letters are in the word \"bookkeeper\"? Answer with just the number."
+        },
+        {
+            "task": "count_letter",
+            "word": "possessions",
+            "letter": "s",
+            "answer": 5,
+            "prompt": "How many times does the letter 's' appear in the word \"possessions\"? Answer with just the number."
+        },
+        {
+            "task": "count_total",
+            "word": "possessions",
+            "letter": null,
+            "answer": 11,
+            "prompt": "How many letters are in the word \"possessions\"? Answer with just the number."
+        }
+    ]
+}
