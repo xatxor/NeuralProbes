@@ -1,0 +1,40 @@
+name: NeuralProbes-mfork
+desc: Multi-workload branch-point resampling - pooled prefixes for a cross-task fit
+args:
+  SHARD: "0"
+  SHARDS: "10"
+  BUDGET: "2100"
+cmd: chmod +x mfork.sh && BUDGET=${BUDGET} ./mfork.sh ${SHARD} ${SHARDS}
+outputs:
+  - forked.tar.gz
+  - grads.npz
+  - shard.log
+inputs:
+  - screened.tar.gz
+  - forkplan.json
+env:
+  docker:
+    image: docker.io/python:3.12
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - TORCH_CUDA_ARCH_LIST: "8.0"
+    - HF_TOKEN
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements-agentic.txt
+    local-paths:
+      - agentic/fork.py
+      - agentic/bipo.py
+      - agentic/agent.py
+      - agentic/model.py
+      - agentic/sandbox.py
+      - agentic/readout.py
+      - agentic/workloads/common.py
+      - agentic/workloads/01_impossible_tests.py
+      - agentic/workloads/11_fastsort.py
+      - agentic/workloads/12_shortcuts.py
+      - yds/mfork.sh
+cloud-instance-types:
+  - g2.1

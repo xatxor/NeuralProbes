@@ -1,0 +1,34 @@
+name: NeuralProbes-gradfork
+desc: Gradient features for forked continuations, windowed to the deliberation, one A100
+args:
+  LAYER: "18"
+  WINDOW: "thinking"
+cmd: chmod +x gradfork.sh && ./gradfork.sh ${LAYER} ${WINDOW}
+# STATIC names. `${SHARD}`-style substitution does not happen inside an `outputs:` block, and a
+# declared output that does not exist aborts the entire upload -- after the job has exited 0. Both
+# files are created before anything can fail.
+outputs:
+  - bipo/grads.npz
+  - job.log
+# No sharding: this replays saved token streams rather than generating them, so a couple of thousand
+# continuations finish on one GPU faster than eight containers would stagger their weight downloads.
+inputs:
+  - forked-all.tar.gz
+env:
+  docker:
+    image: docker.io/python:3.12
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - TORCH_CUDA_ARCH_LIST: "8.0"
+    - HF_TOKEN
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements-agentic.txt
+    local-paths:
+      - agentic/bipo.py
+      - agentic/model.py
+      - yds/gradfork.sh
+cloud-instance-types:
+  - g2.1

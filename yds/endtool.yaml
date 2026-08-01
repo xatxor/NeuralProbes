@@ -1,0 +1,31 @@
+name: NeuralProbes-endtool
+desc: Does the model use an end_conversation tool when abused
+args:
+  SHARD: "0"
+  SHARDS: "10"
+  SEEDS: "4"
+  MODEL: "Qwen/Qwen3-8B"
+cmd: chmod +x endtool.sh && ./endtool.sh ${SHARD} ${SHARDS} ${SEEDS} ${MODEL}
+inputs:
+  - hostile.json
+outputs:
+  - endtool/features.safetensors
+  - endtool/calls.jsonl
+env:
+  docker:
+    image: docker.io/pytorch/pytorch:2.10.0-cuda12.6-cudnn9-runtime
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - HF_TOKEN
+    - HF_REPO
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements.txt
+    local-paths:
+      - endtool.py
+      - evals.py
+      - yds/endtool.sh
+cloud-instance-types:
+  - g2.1

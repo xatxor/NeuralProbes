@@ -1,0 +1,44 @@
+name: NeuralProbes-xfer
+desc: Transfer of the reward-hacking vector to fastsort, impossible and solvable variants
+args:
+  SHARD: "0"
+  SHARDS: "10"
+  LAYER: "18"
+  # 90 minutes. The cells are emitted in priority order and the runner checks the clock between
+  # episodes, so overrunning costs the tail (the second estimator, the negative controls) and never
+  # the transfer claim, its baseline or its matched control.
+  BUDGET: "5400"
+cmd: chmod +x xfer.sh && BUDGET=${BUDGET} ./xfer.sh ${SHARD} ${SHARDS} ${LAYER}
+# STATIC names: `${SHARD}` is not substituted inside an `outputs:` block, and a declared output that
+# does not exist aborts the whole upload after the job has already exited 0.
+outputs:
+  - episodes.tar.gz
+  - shard.log
+inputs:
+  - vectors.tar.gz
+  - episodes-gate.tar.gz
+  - arms.json
+env:
+  docker:
+    image: docker.io/python:3.12
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - TORCH_CUDA_ARCH_LIST: "8.0"
+    - HF_TOKEN
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements-agentic.txt
+    local-paths:
+      - agentic/agent.py
+      - agentic/model.py
+      - agentic/sandbox.py
+      - agentic/readout.py
+      - agentic/workloads/common.py
+      - agentic/workloads/01_impossible_tests.py
+      - agentic/workloads/11_fastsort.py
+      - agentic/workloads/12_shortcuts.py
+      - yds/xfer.sh
+cloud-instance-types:
+  - g2.1

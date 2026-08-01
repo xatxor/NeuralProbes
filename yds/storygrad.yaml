@@ -1,0 +1,36 @@
+name: NeuralProbes-storygrad
+desc: Gradient-space re-extraction of 32 selected concept pairs, full story depth
+args:
+  SHARD: "0"
+  SHARDS: "7"
+  LAYER: "18"
+  PERPOLE: "1000"
+cmd: chmod +x storygrad.sh && ./storygrad.sh ${SHARD} ${SHARDS} ${LAYER} ${PERPOLE}
+# STATIC names. `${SHARD}` is not substituted inside an `outputs:` block, and a declared output that
+# does not exist aborts the entire upload after the job has already exited 0. Both are created before
+# anything can fail; each shard is its own container, so there is nothing to collide with.
+outputs:
+  - storygrad/storygrad.npz
+  - storygrad/storygrad.json
+  - shard.log
+inputs:
+  - pairs-32-keys.json
+env:
+  docker:
+    image: docker.io/python:3.12
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - TORCH_CUDA_ARCH_LIST: "8.0"
+    - HF_TOKEN
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements-storygrad.txt
+    local-paths:
+      - agentic/storygrad.py
+      - agentic/bipo.py
+      - agentic/model.py
+      - yds/storygrad.sh
+cloud-instance-types:
+  - g2.1

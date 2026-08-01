@@ -1,0 +1,41 @@
+name: NeuralProbes-fork
+desc: Prefix-matched branch points - resample k continuations from each trajectory's pre-decision state
+args:
+  SHARD: "0"
+  SHARDS: "8"
+  K: "8"
+  BACK: "3"
+  BUDGET: "9000"
+cmd: chmod +x fork.sh && BUDGET=${BUDGET} ./fork.sh ${SHARD} ${SHARDS} ${K} ${BACK}
+# STATIC names. `${SHARD}` is substituted in `cmd` but NOT in `outputs` -- it aborts the upload and
+# takes the real output with it, after the job has already exited 0. Both are created before anything
+# can fail, and each shard is its own container so there is nothing to collide with.
+outputs:
+  - forked.tar.gz
+  - shard.log
+inputs:
+  - episodes-gate.tar.gz
+env:
+  docker:
+    image: docker.io/python:3.12
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - TORCH_CUDA_ARCH_LIST: "8.0"
+    - HF_TOKEN
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements-agentic.txt
+    local-paths:
+      # Resolved from the REPO ROOT, not from this file's directory.
+      - agentic/fork.py
+      - agentic/agent.py
+      - agentic/model.py
+      - agentic/sandbox.py
+      - agentic/readout.py
+      - agentic/workloads/common.py
+      - agentic/workloads/01_impossible_tests.py
+      - yds/fork.sh
+cloud-instance-types:
+  - g2.1

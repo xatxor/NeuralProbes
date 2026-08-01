@@ -1,0 +1,32 @@
+name: NeuralProbes-evals
+desc: Three targeted evaluations with a dense concept readout over every generated token
+args:
+  SHARD: "0"
+  SHARDS: "2"
+  SEEDS: "4"
+  MODEL: "Qwen/Qwen3-8B"
+cmd: chmod +x evals.sh && ./evals.sh ${SHARD} ${SHARDS} ${SEEDS} ${MODEL}
+inputs:
+  - letters.json
+  - states.json
+  - hostile.json
+outputs:
+  - evals/features.safetensors
+  - evals/replies.jsonl
+env:
+  docker:
+    image: docker.io/pytorch/pytorch:2.10.0-cuda12.6-cudnn9-runtime
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - HF_TOKEN
+    - HF_REPO
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements.txt
+    local-paths:
+      - evals.py
+      - yds/evals.sh
+cloud-instance-types:
+  - g2.1
