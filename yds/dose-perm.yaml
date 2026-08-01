@@ -1,0 +1,39 @@
+name: NeuralProbes-dose-perm
+desc: Dose-response readout against the permuted-label null, for either vector set
+args:
+  SHARD: "0"
+  SHARDS: "2"
+  MODEL: "Qwen/Qwen3-8B"
+  SAMPLES: "4"
+  TOKENS: "256"
+  # diff.safetensors comes from HF_REPO; lda.safetensors travels as an input below.
+  VECTORS: "lda.safetensors"
+  NULL_FILE: "permuted-whitened.safetensors"
+cmd: chmod +x dose.sh && ./dose.sh ${SHARD} ${SHARDS} ${MODEL} ${SAMPLES} ${TOKENS} ${VECTORS} ${NULL_FILE}
+# Both vector sets ship so one config serves both waves. The null must live in the SAME basis as the
+# vectors: `permuted.safetensors` for diff, `permuted-whitened.safetensors` for lda. Pairing whitened
+# vectors with an unwhitened null measures the change of basis, not the signal -- it drove the median
+# concept-to-null swing ratio to 0.30, i.e. concepts moving *less* than their own null.
+inputs:
+  - permuted.safetensors
+  - permuted-whitened.safetensors
+  - lda.safetensors
+outputs:
+  - dose-readout.npz
+env:
+  docker:
+    image: docker.io/pytorch/pytorch:2.10.0-cuda12.6-cudnn9-runtime
+  vars:
+    - PIP_BREAK_SYSTEM_PACKAGES: "1"
+    - HF_HUB_DISABLE_XET: "1"
+    - HF_TOKEN
+    - HF_REPO
+  python:
+    type: manual
+    version: "3.12"
+    requirements-file: yds/requirements.txt
+    local-paths:
+      - dose.py
+      - yds/dose.sh
+cloud-instance-types:
+  - g2.1
