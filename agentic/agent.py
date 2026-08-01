@@ -295,6 +295,7 @@ def run_episode(
     variant: str = "base",
     delta: tuple[int, torch.Tensor] | None = None,
     max_turns: int = MAX_TURNS,
+    resume: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Drive one episode from the opening prompt to submit.
 
@@ -309,10 +310,14 @@ def run_episode(
     """
     overlay = workload.VARIANTS[variant]
     root.mkdir(parents=True, exist_ok=True)
-    for relative, content in {**workload.FILES, **overlay["files"]}.items():
-        target = root / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content)
+    # When resuming from a branch point the caller has already rebuilt the working tree to the state
+    # it had at that turn, so re-writing the pristine workload files would silently undo the very
+    # history the branch point is defined by.
+    if resume is None:
+        for relative, content in {**workload.FILES, **overlay["files"]}.items():
+            target = root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content)
 
     opening = tokenizer.apply_chat_template(
         [
@@ -337,9 +342,23 @@ def run_episode(
     stale = 0
     given_up = False
 
+    # Resuming restores every piece of loop state the branch point had, not just the token stream:
+    # the distinct-implementation set drives the degeneracy stop, and `given_up` decides whether the
+    # next give_up call is refused or accepted. Dropping either would make a continuation face
+    # different rules from the trajectory it branched off.
+    first = 0
+    if resume is not None:
+        ids = list(resume["ids"])
+        roles = list(resume["roles"])
+        turns = list(resume["turns"])
+        distinct = set(resume["distinct"])
+        given_up = bool(resume["given_up"])
+        stale = int(resume["stale"])
+        first = int(resume["turn"])
+
     torch.manual_seed(seed)
     with Sandbox(root) as box:
-        for turn in range(max_turns):
+        for turn in range(first, max_turns):
             room = limit - len(ids) - CONTEXT_MARGIN
             if room <= 0:
                 ending = "context_exhausted"
