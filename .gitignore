@@ -112,3 +112,7 @@ episodes-gate.tar.gz
 lda.safetensors
 permuted.safetensors
 permuted-whitened.safetensors
+
+*.tar.gz
+
+*.tar.gz
