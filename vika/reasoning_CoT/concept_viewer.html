@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Qwen3 concept activations</title>
+<style>
+:root{color-scheme:light;--ink:#1f2937;--muted:#64748b;--line:#dbe2ea;--panel:#f8fafc;--accent:#0f766e}
+*{box-sizing:border-box}
+body{font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;margin:0;color:var(--ink);background:#fff}
+main{max-width:1580px;margin:0 auto;padding:22px}
+h1{font-size:25px;margin:0 0 6px}h2{font-size:19px;margin:20px 0 8px}h3{font-size:15px;margin:0 0 6px}
+.meta,.note{color:var(--muted)}.note{max-width:1100px}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin:20px 0}
+.tab-button{appearance:none;border:0;background:transparent;padding:10px 14px;font-weight:650;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+.tab-button.active{color:var(--accent);border-color:var(--accent)}.tab-panel[hidden]{display:none}
+.controls{display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin:12px 0 14px}
+.control{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+select{max-width:620px;min-width:110px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:var(--ink)}
+#response,#pair{min-width:min(620px,90vw)}#classFilter,#analysisClassFilter,#topClassFilter{min-width:285px;height:118px}
+.control-help{font-size:11px;color:var(--muted);max-width:285px}
+.card{border:1px solid var(--line);border-radius:10px;padding:14px;background:#fff;margin:12px 0}
+.trace-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(330px,430px);gap:14px;align-items:start}
+.trace{line-height:2.15;white-space:pre-wrap;border:1px solid var(--line);border-radius:8px;padding:12px;min-height:120px;max-height:560px;overflow:auto;background:#fff}
+.tok{padding:2px 0;border-radius:2px;cursor:pointer;outline:none}.tok:hover,.tok:focus{box-shadow:inset 0 0 0 1px #334155}.tok.selected{box-shadow:inset 0 0 0 2px #0f766e}
+.response-side{position:sticky;top:12px}.response-side .card{margin-top:0}.token-concepts{max-height:330px;overflow:auto;border-top:1px solid var(--line);margin-top:8px}
+.rank-row{display:grid;grid-template-columns:38px minmax(0,1fr) 104px;gap:8px;align-items:start;padding:7px 2px;border-bottom:1px solid #edf2f7}
+.rank-number{color:var(--muted);font-variant-numeric:tabular-nums}.rank-label{overflow-wrap:anywhere}.rank-class{display:block;color:var(--muted);font-size:11px;margin-top:1px}.rank-score{text-align:right;font-variant-numeric:tabular-nums}.rank-secondary{display:block;color:var(--muted);font-size:10px}.rank-score.positive{color:#b91c1c}.rank-score.negative{color:#1d4ed8}
+.heatmap-shell,.umap-shell{position:relative;overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:8px;background:#fff}.heatmap{display:block;max-width:none}.umap{display:block;width:100%;height:720px}
+.tooltip{position:fixed;z-index:20;pointer-events:none;display:none;max-width:430px;padding:7px 9px;border-radius:6px;background:rgba(15,23,42,.94);color:#fff;font-size:12px;box-shadow:0 3px 14px rgba(0,0,0,.24)}
+.status{padding:10px;border-radius:7px;background:var(--panel);color:var(--muted)}.analysis-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.umap-legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:5px 12px;margin-top:10px;font-size:12px;color:var(--muted)}.legend-item{display:flex;align-items:center;gap:6px}.legend-dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.bar-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.bar-card{min-width:0}.bar-scroll{height:620px;overflow-y:auto;overflow-x:hidden;border:1px solid var(--line);border-radius:7px 7px 0 0}.bar-list{min-width:0}.bar-row{display:grid;grid-template-columns:minmax(150px,52%) minmax(120px,1fr);min-height:28px;align-items:center;border-bottom:1px solid #f1f5f9}.bar-label{padding:4px 8px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px}.bar-plot{position:relative;height:100%;min-height:28px;background-image:linear-gradient(to right,transparent 24.8%,#eef2f7 25%,transparent 25.2%,transparent 49.8%,#eef2f7 50%,transparent 50.2%,transparent 74.8%,#eef2f7 75%,transparent 75.2%)}.bar-zero{position:absolute;top:0;bottom:0;width:1px;background:#94a3b8}.bar-fill{position:absolute;top:5px;bottom:5px;min-width:1px;opacity:.92}.bar-axis{display:grid;grid-template-columns:minmax(150px,52%) minmax(120px,1fr);height:58px;border:1px solid var(--line);border-top:0;border-radius:0 0 7px 7px;background:#fff}.axis-plot{position:relative}.axis-line{position:absolute;top:0;left:0;right:0;border-top:1px solid #94a3b8}.axis-tick{position:absolute;top:5px;transform:translateX(-50%);font-size:10px;color:var(--muted);white-space:nowrap}.axis-label{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:11px;color:#475569}.bar-empty{padding:24px;color:var(--muted);text-align:center}
+#umapContent{width:calc(100vw - 44px);max-width:none;margin-left:calc(50% - 50vw + 22px)}
+@media(max-width:1180px){.bar-grid{grid-template-columns:1fr}}
+@media(max-width:980px){.trace-layout{grid-template-columns:1fr}.response-side{position:static}}
+@media(max-width:760px){main{padding:14px}.controls{align-items:stretch}.control{width:100%}select,#response,#pair,#classFilter,#analysisClassFilter,#topClassFilter{width:100%;min-width:0}.heatmap-shell,.umap-shell{overflow:auto}#umapContent{width:calc(100vw - 28px);margin-left:calc(50% - 50vw + 14px)}}
+</style>
+</head>
+<body>
+<main>
+<h1>Qwen3-8B concept activations</h1>
+<p class="meta">Token-level traces and aggregate analysis for the recorded concept probes. Standardized activation is shown by default; red is positive and blue is negative.</p>
+<nav class="tabs" aria-label="Viewer sections">
+<button class="tab-button active" data-tab="trace-tab">Response viewer</button>
+<button class="tab-button" data-tab="analysis-tab">Probe analysis</button>
+<button class="tab-button" data-tab="top-tab">Top concepts</button>
+<button class="tab-button" data-tab="umap-tab">Probe UMAP</button>
+</nav>
+
+<section id="trace-tab" class="tab-panel">
+<div class="controls">
+<label class="control">Response<select id="response"></select></label>
+<label class="control">Layer<select id="layer"></select></label>
+<label class="control">Method<select id="method"></select></label>
+<label class="control">Activation scale<select id="activationScale"></select></label>
+<label class="control">Token trace scope<select id="traceScope"></select></label>
+<label class="control">Feature classes
+<select id="classFilter" multiple size="6" aria-label="Feature classes"></select>
+<span class="control-help">Choose one or several classes with Ctrl/Cmd or Shift. Select “All classes” to show every concept.</span>
+</label>
+<label class="control">Concept<select id="pair"></select></label>
+</div>
+<div id="meta" class="meta"></div>
+<div class="trace-layout">
+<div class="card"><h3>Token heatmap for selected concept</h3><div id="traces"></div></div>
+<div class="response-side">
+<aside class="card">
+<h3>Concepts over the whole displayed response</h3>
+<div id="responseConceptMeta" class="meta">Loading response-level concept ranking…</div>
+<div id="responseConcepts" class="token-concepts"></div>
+</aside>
+<aside class="card token-panel">
+<h3>Concepts at selected token</h3>
+<div id="tokenConceptMeta" class="meta">Click a token in the trace to rank all recorded concepts at that position.</div>
+<div id="tokenConcepts" class="token-concepts"></div>
+</aside>
+</div>
+</div>
+<div class="card"><h3>Correlation with correctness</h3><div id="corr" class="meta"></div></div>
+</section>
+
+<section id="analysis-tab" class="tab-panel" hidden>
+<div class="controls">
+<label class="control">Dataset<select id="analysisBenchmark"></select></label>
+<label class="control">Layer<select id="analysisLayer"></select></label>
+<label class="control">Probe method<select id="analysisMethod"></select></label>
+<label class="control">Value scale<select id="analysisScale"></select></label>
+<label class="control">Feature classes
+<select id="analysisClassFilter" multiple size="6" aria-label="Analysis feature classes"></select>
+<span class="control-help">Choose one or several classes with Ctrl/Cmd or Shift. Select “All classes” to include every concept.</span>
+</label>
+</div>
+<p class="note">Both heatmaps are restricted to the selected feature classes. The pairwise probe-geometry heatmap is shown first. In the evaluation-example heatmap, columns are ordered with correct answers first and incorrect answers second; a colored header band and separator make the two groups visible. Cells use per-probe z-scores by default, while raw cosine similarity remains selectable.</p>
+<div id="analysisStatus" class="status">Loading analysis matrices…</div>
+<div id="analysisContent" class="analysis-grid" hidden>
+<div class="card">
+<h2>Pairwise cosine similarity of selected diff probes</h2>
+<p class="meta">Figure-5-style matrix ordered by average-linkage hierarchical clustering. Tick labels are intentionally shown only for a subset of rows and columns.</p>
+<div class="heatmap-shell"><canvas id="similarityHeatmap" class="heatmap"></canvas></div>
+</div>
+<div class="card">
+<h2>Probes × evaluation examples</h2>
+<p class="meta">Selected probe rows follow the global hierarchical order from the diff-probe geometry at the selected layer. Standardized cells measure deviations from each probe’s own pooled example mean and standard deviation.</p>
+<div class="heatmap-shell"><canvas id="scenarioHeatmap" class="heatmap"></canvas></div>
+</div>
+</div>
+</section>
+
+<section id="top-tab" class="tab-panel" hidden>
+<div class="controls">
+<label class="control">Dataset<select id="topBenchmark"></select></label>
+<label class="control">Layer<select id="topLayer"></select></label>
+<label class="control">Activation summary<select id="topScale"></select></label>
+<label class="control">Feature classes
+<select id="topClassFilter" multiple size="6" aria-label="Top-concept feature classes"></select>
+<span class="control-help">All scored concepts from the selected classes are shown and ranked. Select “All classes” to include every concept.</span>
+</label>
+</div>
+<p id="topDescription" class="note">Diff concepts shown for all, correct, and incorrect examples. Choose either one layer or an average over all recorded layers.</p>
+<p class="note"><strong>Signed mean z-score</strong> = mean(z): directional group shift; positive and negative deviations cancel. <strong>Positive mean z-score</strong> = mean(max(z, 0)): frequency and strength of above-baseline movement toward the first pole of the concept pair. <strong>Negative mean z-score</strong> = mean(max(-z, 0)): frequency and strength of below-baseline movement toward the opposite pole, shown as a positive magnitude.</p>
+<div id="topStatus" class="status">Loading top-concept summaries…</div>
+<div id="topContent" class="bar-grid" hidden>
+<div class="card bar-card"><h3>All examples: all concepts ranked</h3><div class="bar-scroll"><div id="topAll" class="bar-list"></div></div><div id="topAllAxis" class="bar-axis"></div></div>
+<div class="card bar-card"><h3>Correct examples: all concepts ranked</h3><div class="bar-scroll"><div id="topCorrect" class="bar-list"></div></div><div id="topCorrectAxis" class="bar-axis"></div></div>
+<div class="card bar-card"><h3>Incorrect examples: all concepts ranked</h3><div class="bar-scroll"><div id="topIncorrect" class="bar-list"></div></div><div id="topIncorrectAxis" class="bar-axis"></div></div>
+</div>
+</section>
+
+<section id="umap-tab" class="tab-panel" hidden>
+<div class="controls"><label class="control">Layer<select id="umapLayer"></select></label></div>
+<p class="note">Two-dimensional UMAP of the recorded FP16 normalized <code>diff</code> probe vectors. Translucent filled regions show the ten semantic macro-clusters. Strong spatial outliers are reassigned to <code>Other</code> for the selected layer.</p>
+<div id="umapStatus" class="status">Loading UMAP…</div>
+<div id="umapContent" class="card" hidden>
+<h2>UMAP of 10 semantic concept clusters</h2>
+<div class="umap-shell"><canvas id="umapCanvas" class="umap"></canvas></div>
+<div id="umapLegend" class="umap-legend"></div>
+</div>
+</section>
+</main>
+<div id="tooltip" class="tooltip"></div>
+<script>
+'use strict';
+let indexData=null,responseData=null,analysisManifest=null,topConceptData=null,currentUmap=null;
+let selectedTokenIndex=null,tokenRequestVersion=0,responseConceptRequestVersion=0,responseRenderVersion=0;
+const activationScales=[{value:'standardized',label:'Standardized z-score'},{value:'raw',label:'Raw cosine'}];
+const traceScopes=[{value:'reasoning',label:'Reasoning only'},{value:'full',label:'Full model response'}];
+const topScales=[
+  {value:'z_score',label:'Signed mean z-score',axis:'Mean signed z-score',description:'mean(z): directional shift; positive and negative deviations cancel.'},
+  {value:'positive_z_score',label:'Positive mean z-score',axis:'Mean positive z-score',description:'mean(max(z, 0)): above-baseline movement toward the first pole.'},
+  {value:'negative_z_score',label:'Negative mean z-score',axis:'Mean negative z-score magnitude',description:'mean(max(-z, 0)): below-baseline movement toward the opposite pole, shown as a positive magnitude.'},
+  {value:'cosine',label:'Raw cosine similarity',axis:'Mean cosine similarity',description:'mean raw cosine similarity without z-score normalization.'}
+];
+const matrixCache=new Map(),classColors=new Map();
+const ALL_CLASSES='__all__';
+const MACRO_CLASS_ORDER=['Reasoning & Epistemics','Emotion & Personality','Relationships & Communication','Ethics & Justice','Politics, Society & Culture','AI Identity & Agency','Alignment, Safety & Security','Information, Privacy & Truth','Work, Planning & Reliability','Creativity, Values & Worldviews','Other'];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function optionMarkup(rows,value,label){return rows.map(x=>`<option value="${esc(value(x))}">${esc(label(x))}</option>`).join('')}
+function setOptions(el,rows,value,label){el.innerHTML=optionMarkup(rows,value,label)}
+function correctnessLabel(value){return value===true?'correct':value===false?'incorrect':'unscored'}
+function featureClass(row){return row&&row.class_name?String(row.class_name):'Unclassified'}
+function macroClass(row){return row&&row.macro_class?String(row.macro_class):'Other'}
+async function fetchJson(url){
+  let response;
+  try{response=await fetch(url,{cache:'no-store'})}catch(error){throw new Error(`${url}: network request failed (${error.message})`)}
+  const text=await response.text();
+  if(!response.ok){let detail='';try{detail=JSON.parse(text).error||''}catch{}throw new Error(`${url}: ${detail||`${response.status} ${response.statusText}`}`)}
+  try{return JSON.parse(text)}catch(error){throw new Error(`${url}: server returned invalid JSON (${error.message})`)}
+}
+
+function activateTab(id){
+  document.querySelectorAll('.tab-button').forEach(button=>button.classList.toggle('active',button.dataset.tab===id));
+  document.querySelectorAll('.tab-panel').forEach(panel=>panel.hidden=panel.id!==id);
+  if(id==='analysis-tab'&&analysisManifest)renderAnalysis();
+  if(id==='top-tab'&&analysisManifest)renderTopConcepts();
+  if(id==='umap-tab'&&analysisManifest)renderUmap();
+}
+document.querySelectorAll('.tab-button').forEach(button=>button.addEventListener('click',()=>activateTab(button.dataset.tab)));
+
+function setupClassFilter(id='classFilter'){
+  const classes=[...new Set(indexData.pairs.map(featureClass))].sort((a,b)=>a.localeCompare(b));
+  $(id).innerHTML=`<option value="${ALL_CLASSES}">All classes</option>`+optionMarkup(classes,x=>x,x=>x);
+  $(id).options[0].selected=true;
+  if(id!=='classFilter')return;
+  const present=new Set(indexData.pairs.map(macroClass)),macros=[...MACRO_CLASS_ORDER.filter(name=>present.has(name)),...[...present].filter(name=>!MACRO_CLASS_ORDER.includes(name)).sort((a,b)=>a.localeCompare(b))];
+  macros.forEach((name,index)=>classColors.set(name,name==='Other'?'#64748b':`hsl(${Math.round(index*137.508)%360} 62% 46%)`));
+}
+function selectedFeatureClasses(id='classFilter'){
+  const values=[...$(id).selectedOptions].map(option=>option.value);
+  if(!values.length||values.includes(ALL_CLASSES))return null;
+  return new Set(values);
+}
+function normalizeClassSelection(id='classFilter'){
+  const options=[...$(id).options],all=options[0],selected=options.filter(option=>option.selected);
+  if(all.selected&&selected.length>1)all.selected=false;
+  if(!options.some(option=>option.selected))all.selected=true;
+}
+function rankedPairs(){
+  const key=`${$('method').value}:${$('layer').value}`,standardized=$('activationScale').value==='standardized';
+  return (responseData.rankings[key]||[]).map(item=>{const raw=Number(item.activation),z=item.z_activation===null?null:Number(item.z_activation),score=standardized?z:raw;return{...indexData._pairs.get(Number(item.pair)),activation:raw,zActivation:z,score,direction:Number(score)>=0?'positive':'negative'}}).sort((a,b)=>(b.score??-Infinity)-(a.score??-Infinity));
+}
+function filteredRankedPairs(){
+  const selected=selectedFeatureClasses();
+  return rankedPairs().filter(row=>!selected||selected.has(featureClass(row)));
+}
+function updatePairs(){
+  const previous=Number($('pair').value),rows=filteredRankedPairs();
+  if(!rows.length){$('pair').innerHTML='<option value="">No concepts in selected classes</option>';$('pair').disabled=true;return false}
+  $('pair').disabled=false;
+  const numbered=rows.map((row,index)=>({...row,optionNumber:index+1}));
+  setOptions($('pair'),numbered,row=>row.pair,row=>`${row.optionNumber}. ${row.direction} · ${row.concept} ↔ ${row.antagonist} · ${featureClass(row)} · ${$('activationScale').value==='standardized'?(row.zActivation===null?'z n/a':`z ${row.zActivation.toFixed(2)}σ`):`mean ${row.activation.toFixed(3)}`}`);
+  if(rows.some(row=>row.pair===previous))$('pair').value=String(previous);
+  return true;
+}
+function resetTokenPanel(){
+  selectedTokenIndex=null;tokenRequestVersion++;
+  $('tokenConceptMeta').textContent='Click a token in the trace to rank all recorded concepts at that position.';
+  $('tokenConcepts').innerHTML='';
+}
+function resetResponseConceptPanel(){
+  responseConceptRequestVersion++;
+  $('responseConceptMeta').textContent='Loading response-level concept ranking…';
+  $('responseConcepts').innerHTML='';
+}
+function selectedFirst(items){
+  const selected=selectedFeatureClasses(),isSelected=item=>selected&&selected.has(featureClass(indexData._pairs.get(Number(item.pair))));
+  return selected?[...items.filter(isSelected),...items.filter(item=>!isSelected(item))]:items;
+}
+function conceptRankMarkup(items,standardized,rawKey='cosine',zKey='z_score'){
+  return items.map((item,rank)=>{
+    const pair=indexData._pairs.get(Number(item.pair)),raw=Number(item[rawKey]),z=item[zKey]===null?null:Number(item[zKey]),value=standardized?z:raw,polarity=Number(value)>=0?'positive':'negative';
+    const label=pair?`${pair.concept} ↔ ${pair.antagonist}`:`pair ${item.pair}`,primary=standardized?(z===null?'n/a':`${z.toFixed(2)}σ`):raw.toFixed(4),secondary=standardized?`raw ${raw.toFixed(4)}`:(z===null?'z n/a':`z ${z.toFixed(2)}σ`);
+    return `<div class="rank-row"><span class="rank-number">${rank+1}</span><span class="rank-label">${esc(label)}<span class="rank-class">${esc(featureClass(pair))}</span></span><span class="rank-score ${polarity}">${primary}<span class="rank-secondary">${secondary}</span></span></div>`;
+  }).join('');
+}
+async function refreshResponse(){
+  responseData=await fetchJson(`${$('response').value}.json`);
+  resetTokenPanel();resetResponseConceptPanel();
+  updatePairs();
+  await renderResponse();
+}
+function rawTraceScale(trace,method,layer){
+  const values=trace.values.map(value=>Math.abs(Number(value))).filter(Number.isFinite).sort((a,b)=>a-b);
+  return values.length?Math.max(values[Math.min(values.length-1,Math.floor(values.length*.99))],1e-6):0.001;
+}
+async function renderResponse(){
+  if(!responseData||!$('pair').value)return;
+  const version=++responseRenderVersion;
+  const pair=Number($('pair').value),layer=Number($('layer').value),method=$('method').value,scope=$('traceScope').value;
+  const response=indexData.responses.find(item=>item.key===$('response').value);
+  const query=new URLSearchParams({benchmark:response.benchmark,id:response.id,method,layer:String(layer),pair:String(pair),scope});
+  const trace=await fetchJson(`/api/trace?${query}`);
+  if(version!==responseRenderVersion)return;
+  const standardized=$('activationScale').value==='standardized',scale=standardized?3:rawTraceScale(trace,method,layer),scopeLabel=trace.scope==='full'?'full response':'reasoning only',fallback=trace.fallback?' · full-response traces unavailable, using reasoning only':'';
+  $('meta').textContent=`${response.benchmark}/${response.id} · ${correctnessLabel(response.correct)} · ${scopeLabel} · ${trace.tokens.length} tokens · ${standardized?'token z-score':'raw cosine'}${fallback}`;
+  const text=trace.tokens.map((token,index)=>{
+    const raw=Number(trace.values[index]),z=trace.z_values[index]===null?null:Number(trace.z_values[index]),value=standardized?z:raw,finite=Number.isFinite(value),alpha=finite?Math.min(Math.abs(value)/scale,1):0,color=!finite?'rgba(148,163,184,.25)':value>=0?`rgba(220,38,38,${alpha})`:`rgba(37,99,235,${alpha})`;
+    const selected=index===selectedTokenIndex?' selected':'',title=`token ${index} · z ${z===null?'n/a':z.toFixed(3)}σ · raw cosine ${raw.toFixed(4)}`;
+    return `<span class="tok${selected}" data-token-index="${index}" tabindex="0" role="button" title="${esc(title)}" style="background:${color}">${esc(token)}</span>`;
+  }).join('');
+  $('traces').innerHTML=`<div class="trace">${text}</div>`;
+  const rows=indexData.correlations.filter(item=>item.scope==='pooled'&&item.method===method&&Number(item.layer)===layer&&Number(item.pair)===pair);
+  const fmt=value=>value===null||Number.isNaN(Number(value))?'n/a':Number(value).toFixed(4);
+  $('corr').innerHTML=rows.length?rows.map(item=>`${esc(item.method)}: r=${fmt(item.correlation)}, correct−incorrect=${fmt(item.mean_difference)}, n=${item.n}`).join('<br>'):'No pooled correctness statistic is available for this selection.';
+  await renderResponseConcepts();
+  if(selectedTokenIndex!==null&&selectedTokenIndex<trace.tokens.length)renderTokenConcepts(selectedTokenIndex);
+}
+async function renderResponseConcepts(){
+  const response=indexData.responses.find(item=>item.key===$('response').value),method=$('method').value,layer=Number($('layer').value),scope=$('traceScope').value,version=++responseConceptRequestVersion;
+  $('responseConceptMeta').textContent='Loading response-level concept ranking…';$('responseConcepts').innerHTML='';
+  const query=new URLSearchParams({benchmark:response.benchmark,id:response.id,method,layer:String(layer),scope});
+  try{
+    const payload=await fetchJson(`/api/response-concepts?${query}`);
+    if(version!==responseConceptRequestVersion)return;
+    const standardized=$('activationScale').value==='standardized',metric=item=>standardized?(item.z_score===null?-Infinity:Number(item.z_score)):Number(item.cosine),items=selectedFirst([...payload.items].sort((a,b)=>metric(b)-metric(a))),scopeLabel=payload.scope==='full'?'full response':'reasoning only',fallback=payload.fallback?' (fallback)':'';
+    $('responseConceptMeta').textContent=`${scopeLabel}${fallback} · ${payload.token_count} tokens · ${method} · L${layer} · ranked by ${standardized?'mean token z-score':'mean raw cosine'} · ${payload.items.length} concepts`;
+    $('responseConcepts').innerHTML=conceptRankMarkup(items,standardized);
+  }catch(error){
+    if(version!==responseConceptRequestVersion)return;
+    $('responseConceptMeta').textContent=`Could not load response concepts: ${error.message}`;
+  }
+}
+function markSelectedToken(index){
+  document.querySelectorAll('.tok').forEach(token=>token.classList.toggle('selected',Number(token.dataset.tokenIndex)===index));
+}
+async function renderTokenConcepts(index){
+  selectedTokenIndex=index;markSelectedToken(index);
+  const response=indexData.responses.find(item=>item.key===$('response').value),method=$('method').value,layer=Number($('layer').value),scope=$('traceScope').value;
+  const version=++tokenRequestVersion;
+  $('tokenConceptMeta').textContent=`Loading concepts for token ${index}…`;
+  $('tokenConcepts').innerHTML='';
+  const query=new URLSearchParams({benchmark:response.benchmark,id:response.id,method,layer:String(layer),token_index:String(index),scope});
+  try{
+    const payload=await fetchJson(`/api/token-concepts?${query}`);
+    if(version!==tokenRequestVersion)return;
+    const standardized=$('activationScale').value==='standardized',metric=item=>standardized?(item.z_score===null?-Infinity:Number(item.z_score)):Number(item.cosine),items=selectedFirst([...payload.items].sort((a,b)=>metric(b)-metric(a)));
+    $('tokenConceptMeta').innerHTML=`Token ${payload.token_index}: <strong>${esc(String(payload.token).replace(/\s/g,'·'))}</strong> · ${esc(method)} · L${layer} · ${payload.scope==='full'?'full response':'reasoning'} · ranked by ${standardized?'per-probe z-score':'raw cosine'} · ${payload.items.length} concepts`;
+    $('tokenConcepts').innerHTML=conceptRankMarkup(items,standardized);
+  }catch(error){
+    if(version!==tokenRequestVersion)return;
+    $('tokenConceptMeta').textContent=`Could not load token concepts: ${error.message}`;
+  }
+}
+$('traces').addEventListener('click',event=>{const token=event.target.closest('.tok');if(token)renderTokenConcepts(Number(token.dataset.tokenIndex))});
+$('traces').addEventListener('keydown',event=>{const token=event.target.closest('.tok');if(token&&(event.key==='Enter'||event.key===' ')){event.preventDefault();renderTokenConcepts(Number(token.dataset.tokenIndex))}});
+
+function prepareCanvas(canvas,cssWidth,cssHeight){const ratio=window.devicePixelRatio||1;canvas.style.width=`${cssWidth}px`;canvas.style.height=`${cssHeight}px`;canvas.width=Math.round(cssWidth*ratio);canvas.height=Math.round(cssHeight*ratio);const ctx=canvas.getContext('2d');ctx.setTransform(ratio,0,0,ratio,0,0);return ctx}
+function decodeMatrix(payload){if(payload._decoded)return payload._decoded;const binary=atob(payload.data),bytes=new Uint8Array(binary.length);for(let index=0;index<binary.length;index++)bytes[index]=binary.charCodeAt(index);payload._decoded=new Int8Array(bytes.buffer);return payload._decoded}
+function subsetMatrix(payload,rowIndices,columnIndices=null){
+  const source=decodeMatrix(payload),[,sourceCols]=payload.shape,columns=columnIndices||Array.from({length:sourceCols},(_,index)=>index),values=new Int8Array(rowIndices.length*columns.length);
+  let target=0;for(const row of rowIndices){const offset=row*sourceCols;for(const column of columns)values[target++]=source[offset+column]}
+  return{...payload,shape:[rowIndices.length,columns.length],data:null,_decoded:values};
+}
+function colorFor(value){if(value===-128)return[226,232,240,255];const t=value/127;if(t<0){const a=-t;return[Math.round(255+(37-255)*a),Math.round(255+(99-255)*a),Math.round(255+(235-255)*a),255]}return[Math.round(255+(220-255)*t),Math.round(255+(38-255)*t),Math.round(255+(38-255)*t),255]}
+function pairLabel(id){const row=indexData&&indexData._pairs.get(Number(id));return row?`${row.concept} ↔ ${row.antagonist}`:`pair ${id}`}
+function drawHeatmap(canvas,payload,rowIds,columnMeta,kind){
+  const [rows,cols]=payload.shape,values=decodeMatrix(payload),left=kind==='similarity'?190:230,bottom=kind==='similarity'?165:135,top=kind==='similarity'?28:58,right=90;
+  const plotW=kind==='similarity'?980:Math.max(760,Math.min(1120,cols*48)),plotH=kind==='similarity'?980:900,width=left+plotW+right,height=top+plotH+bottom;
+  canvas.width=width;canvas.height=height;canvas.style.width=`${width}px`;canvas.style.height=`${height}px`;
+  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,width,height);
+  const raster=document.createElement('canvas');raster.width=cols;raster.height=rows;const rctx=raster.getContext('2d'),image=rctx.createImageData(cols,rows);
+  for(let index=0;index<values.length;index++){const color=colorFor(values[index]),offset=index*4;image.data[offset]=color[0];image.data[offset+1]=color[1];image.data[offset+2]=color[2];image.data[offset+3]=255}
+  rctx.putImageData(image,0,0);ctx.imageSmoothingEnabled=false;ctx.drawImage(raster,left,top,plotW,plotH);ctx.strokeStyle='#94a3b8';ctx.strokeRect(left,top,plotW,plotH);
+  if(kind==='scenario'&&columnMeta.length){
+    const groupName=value=>value===true?'Correct':value===false?'Incorrect':'Unscored',groupColor=value=>value===true?'#16a34a':value===false?'#dc2626':'#64748b',groups=[];
+    let startColumn=0,current=columnMeta[0].correct;
+    for(let column=1;column<=columnMeta.length;column++){
+      const value=column<columnMeta.length?columnMeta[column].correct:Symbol('end');
+      if(value!==current){groups.push({start:startColumn,end:column,correct:current});startColumn=column;current=value}
+    }
+    ctx.font='600 11px system-ui';ctx.textAlign='center';ctx.textBaseline='bottom';
+    groups.forEach((group,index)=>{
+      const x0=left+group.start/cols*plotW,x1=left+group.end/cols*plotW;
+      ctx.fillStyle=groupColor(group.correct);ctx.globalAlpha=.78;ctx.fillRect(x0,top-16,Math.max(1,x1-x0),10);ctx.globalAlpha=1;ctx.fillStyle='#334155';ctx.fillText(`${groupName(group.correct)} (${group.end-group.start})`,(x0+x1)/2,top-22);
+      if(index>0){ctx.strokeStyle='#0f172a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,top-18);ctx.lineTo(x0,top+plotH);ctx.stroke();ctx.lineWidth=1}
+    });
+  }
+  ctx.fillStyle='#475569';ctx.font='11px system-ui';ctx.textAlign='right';ctx.textBaseline='middle';
+  const rowTicks=Math.min(18,rows);for(let tick=0;tick<rowTicks;tick++){const row=rowTicks===1?0:Math.round(tick*(rows-1)/(rowTicks-1)),y=top+(row+.5)/rows*plotH;ctx.fillText(pairLabel(rowIds[row]).slice(0,31),left-7,y)}
+  const colTicks=Math.min(kind==='similarity'?16:14,cols);for(let tick=0;tick<colTicks;tick++){const column=colTicks===1?0:Math.round(tick*(cols-1)/(colTicks-1)),x=left+(column+.5)/cols*plotW,label=kind==='similarity'?pairLabel(rowIds[column]):columnMeta[column].label;ctx.save();ctx.translate(x,top+plotH+8);ctx.rotate(-0.85);ctx.fillText(label.slice(0,34),0,0);ctx.restore()}
+  const barX=left+plotW+30,barY=top+plotH*.18,barH=plotH*.64,gradient=ctx.createLinearGradient(0,barY+barH,0,barY);gradient.addColorStop(0,'#2563eb');gradient.addColorStop(.5,'#ffffff');gradient.addColorStop(1,'#dc2626');ctx.fillStyle=gradient;ctx.fillRect(barX,barY,16,barH);ctx.strokeStyle='#94a3b8';ctx.strokeRect(barX,barY,16,barH);ctx.fillStyle='#475569';ctx.font='11px system-ui';ctx.textAlign='left';const suffix=payload.metric==='z_score'?'σ':'';ctx.fillText(`${payload.color_limit.toFixed(2)}${suffix}`,barX+22,barY+3);ctx.fillText('0',barX+22,barY+barH/2);ctx.fillText(`${(-payload.color_limit).toFixed(2)}${suffix}`,barX+22,barY+barH);
+  canvas._heatmapMeta={payload,values,rowIds,columnMeta,kind,left,top,plotW,plotH,rows,cols};
+}
+
+function payloadMetric(payload,value){return payload.metric==='z_score'?`z-score ${value.toFixed(3)}σ`:`cosine ${value.toFixed(4)}`}
+function bindHeatmapTooltip(canvas){canvas.addEventListener('mousemove',event=>{const meta=canvas._heatmapMeta;if(!meta)return;const rect=canvas.getBoundingClientRect(),x=(event.clientX-rect.left)*canvas.width/rect.width,y=(event.clientY-rect.top)*canvas.height/rect.height;if(x<meta.left||x>meta.left+meta.plotW||y<meta.top||y>meta.top+meta.plotH){$('tooltip').style.display='none';return}const column=Math.min(meta.cols-1,Math.floor((x-meta.left)/meta.plotW*meta.cols)),row=Math.min(meta.rows-1,Math.floor((y-meta.top)/meta.plotH*meta.rows)),raw=meta.values[row*meta.cols+column],value=raw===-128?null:raw/127*meta.payload.color_limit;const columnText=meta.kind==='similarity'?pairLabel(meta.rowIds[column]):`${meta.columnMeta[column].label}${meta.columnMeta[column].detail?` — ${meta.columnMeta[column].detail}`:''}`;$('tooltip').innerHTML=`<strong>${esc(pairLabel(meta.rowIds[row]))}</strong><br>${esc(columnText)}<br>${value===null?'missing':payloadMetric(meta.payload,value)}`;$('tooltip').style.display='block';$('tooltip').style.left=`${Math.min(window.innerWidth-440,event.clientX+14)}px`;$('tooltip').style.top=`${Math.min(window.innerHeight-90,event.clientY+14)}px`});canvas.addEventListener('mouseleave',()=>{$('tooltip').style.display='none'})}
+async function matrix(path){if(!matrixCache.has(path))matrixCache.set(path,fetchJson(path));return matrixCache.get(path)}
+async function renderAnalysis(){
+  if(!analysisManifest)return;
+  const benchmark=$('analysisBenchmark').value,layer=Number($('analysisLayer').value),method=$('analysisMethod').value,key=`${benchmark}:${method}:${layer}`,standardized=$('analysisScale').value==='standardized',scenarioPath=(standardized?analysisManifest.scenario_matrices:analysisManifest.scenario_matrices_raw)[key],similarityPath=analysisManifest.similarity_matrices[String(layer)];
+  if(!scenarioPath||!similarityPath){$('analysisStatus').textContent='No matrix is available for this selection.';$('analysisStatus').hidden=false;$('analysisContent').hidden=true;return}
+  $('analysisStatus').textContent='Loading analysis matrices…';$('analysisStatus').hidden=false;$('analysisContent').hidden=true;
+  try{
+    const [scenario,similarity]=await Promise.all([matrix(scenarioPath),matrix(similarityPath)]),benchmarkInfo=analysisManifest.benchmarks.find(item=>item.name===benchmark),allRowIds=analysisManifest.probe_orders[String(layer)],selected=selectedFeatureClasses('analysisClassFilter'),indices=[];
+    allRowIds.forEach((pair,index)=>{const row=indexData._pairs.get(Number(pair));if(!selected||selected.has(featureClass(row)))indices.push(index)});
+    if(!indices.length){$('analysisStatus').textContent='No concepts are available in the selected feature classes.';$('analysisStatus').hidden=false;$('analysisContent').hidden=true;return}
+    const correctnessRank=value=>value===true?0:value===false?1:2,columnOrder=benchmarkInfo.responses.map((item,index)=>({item,index})).sort((a,b)=>correctnessRank(a.item.correct)-correctnessRank(b.item.correct)||String(a.item.id).localeCompare(String(b.item.id))).map(entry=>entry.index),orderedResponses=columnOrder.map(index=>benchmarkInfo.responses[index]);
+    const rowIds=indices.map(index=>allRowIds[index]),filteredScenario=subsetMatrix(scenario,indices,columnOrder),filteredSimilarity=subsetMatrix(similarity,indices,indices);
+    drawHeatmap($('similarityHeatmap'),filteredSimilarity,rowIds,orderedResponses,'similarity');drawHeatmap($('scenarioHeatmap'),filteredScenario,rowIds,orderedResponses,'scenario');$('analysisStatus').hidden=true;$('analysisContent').hidden=false;
+  }catch(error){$('analysisStatus').textContent=`Could not load analysis: ${error.message}`;$('analysisStatus').hidden=false;$('analysisContent').hidden=true}
+}
+
+function isTopZMetric(metric){return metric!=='cosine'}
+function drawTopAxis(axis,bounds,metricLabel){
+  const minimum=bounds.minimum,maximum=bounds.maximum,span=Math.max(maximum-minimum,1e-6),ticks=[];
+  for(let tick=0;tick<=4;tick++){
+    const value=minimum+span*tick/4,position=tick*25,label=value.toFixed(Math.abs(value)<.1?3:2);
+    ticks.push(`<span class="axis-tick" style="left:${position}%">${esc(label)}</span>`);
+  }
+  axis.innerHTML=`<div></div><div class="axis-plot"><span class="axis-line"></span>${ticks.join('')}<span class="axis-label">${esc(metricLabel)}</span></div>`;
+}
+function drawTopBars(container,axis,rows,color,metricLabel,bounds){
+  container._barSource={axis,rows,color,metricLabel,bounds};container._barRows=rows;
+  if(!rows.length){container.innerHTML='<div class="bar-empty">No scored concepts in this selection.</div>';drawTopAxis(axis,bounds,metricLabel);return}
+  const minimum=bounds.minimum,maximum=bounds.maximum,span=Math.max(maximum-minimum,1e-6),percent=value=>Math.max(0,Math.min(100,(value-minimum)/span*100)),zero=percent(0);
+  container.innerHTML=rows.map((row,index)=>{
+    const end=percent(row.value),left=Math.min(zero,end),width=Math.max(.15,Math.abs(end-zero));
+    return `<div class="bar-row" data-row-index="${index}"><span class="bar-label" title="${esc(row.label)}">${esc(row.label)}</span><span class="bar-plot"><span class="bar-zero" style="left:${zero}%"></span><span class="bar-fill" style="left:${left}%;width:${width}%;background:${color}"></span></span></div>`;
+  }).join('');
+  drawTopAxis(axis,bounds,metricLabel);
+  const scroller=container.closest('.bar-scroll');if(scroller)scroller.scrollTop=0;
+}
+function bindBarTooltip(container){
+  container.addEventListener('mousemove',event=>{
+    const element=event.target.closest('.bar-row'),rows=container._barRows;if(!element||!rows){$('tooltip').style.display='none';return}
+    const row=rows[Number(element.dataset.rowIndex)],standardized=isTopZMetric(row.metric);
+    $('tooltip').innerHTML=`<strong>${esc(row.label)}</strong><br>${esc(featureClass(row.meta))}<br>${esc(row.metricLabel)}: ${row.value.toFixed(standardized?3:4)}${standardized?'σ':''}<br>${row.n_examples} examples`;
+    $('tooltip').style.display='block';$('tooltip').style.left=`${Math.min(window.innerWidth-440,event.clientX+14)}px`;$('tooltip').style.top=`${Math.min(window.innerHeight-90,event.clientY+14)}px`;
+  });
+  container.addEventListener('mouseleave',()=>{$('tooltip').style.display='none'});
+}
+function topRows(rows,metric,selected,metricLabel){
+  return(rows||[]).map(item=>{const meta=indexData._pairs.get(Number(item.pair)),value=item[metric]===null?NaN:Number(item[metric]);return{...item,meta,value,label:pairLabel(item.pair),metric,metricLabel}}).filter(item=>Number.isFinite(item.value)&&(!selected||selected.has(featureClass(item.meta)))).sort((a,b)=>b.value-a.value);
+}
+async function renderTopConcepts(){
+  if(!analysisManifest||!analysisManifest.top_concepts)return;
+  $('topStatus').textContent='Loading top-concept summaries…';$('topStatus').hidden=false;$('topContent').hidden=true;
+  try{
+    if(!topConceptData)topConceptData=await fetchJson(analysisManifest.top_concepts);
+    const benchmark=$('topBenchmark').value,metric=$('topScale').value,layerChoice=$('topLayer').value,selected=selectedFeatureClasses('topClassFilter'),benchmarkData=topConceptData.benchmarks[benchmark],mode=topScales.find(item=>item.value===metric)||topScales[0];
+    if(!benchmarkData)throw new Error(`No top-concept summary is available for ${benchmark}`);
+    const groups=layerChoice==='average'?benchmarkData:benchmarkData.by_layer&&benchmarkData.by_layer[layerChoice];
+    if(!groups)throw new Error(`No top-concept summary is available for layer ${layerChoice}. Re-run build_concept_report.py.`);
+    const allRows=topRows(groups.all,metric,selected,mode.label),correctRows=topRows(groups.correct,metric,selected,mode.label),incorrectRows=topRows(groups.incorrect,metric,selected,mode.label),displayed=[...allRows,...correctRows,...incorrectRows].map(row=>row.value).filter(Number.isFinite),bounds=displayed.length?{minimum:Math.min(0,...displayed),maximum:Math.max(0,...displayed)}:{minimum:0,maximum:1};
+    drawTopBars($('topAll'),$('topAllAxis'),allRows,'#4c78a8',mode.axis,bounds);drawTopBars($('topCorrect'),$('topCorrectAxis'),correctRows,'#54a24b',mode.axis,bounds);drawTopBars($('topIncorrect'),$('topIncorrectAxis'),incorrectRows,'#e45756',mode.axis,bounds);
+    const layerLabel=layerChoice==='average'?`averaged over layers ${topConceptData.layers.join(', ')}`:`layer ${layerChoice}`;
+    $('topDescription').textContent=`${benchmark} diff concepts at ${layerLabel}. ${mode.description} Every scored concept from the selected classes is shown; the three panels share one horizontal scale, which remains visible below each scrollable list.`;$('topStatus').hidden=true;$('topContent').hidden=false;
+  }catch(error){$('topStatus').textContent=`Could not load top concepts: ${error.message}`;$('topStatus').hidden=false;$('topContent').hidden=true}
+}
+
+function classColor(name){return classColors.get(name)||'#64748b'}
+function convexHull(points){
+  if(points.length<3)return points;
+  const sorted=[...points].sort((a,b)=>a.sx-b.sx||a.sy-b.sy),cross=(o,a,b)=>(a.sx-o.sx)*(b.sy-o.sy)-(a.sy-o.sy)*(b.sx-o.sx),lower=[],upper=[];
+  for(const point of sorted){while(lower.length>=2&&cross(lower[lower.length-2],lower[lower.length-1],point)<=0)lower.pop();lower.push(point)}
+  for(let index=sorted.length-1;index>=0;index--){const point=sorted[index];while(upper.length>=2&&cross(upper[upper.length-2],upper[upper.length-1],point)<=0)upper.pop();upper.push(point)}
+  lower.pop();upper.pop();return lower.concat(upper);
+}
+function drawClusterRegion(ctx,items,name){
+  const hull=convexHull(items);if(hull.length<3)return;
+  const cx=hull.reduce((sum,p)=>sum+p.sx,0)/hull.length,cy=hull.reduce((sum,p)=>sum+p.sy,0)/hull.length,expanded=hull.map(p=>({sx:cx+(p.sx-cx)*1.06,sy:cy+(p.sy-cy)*1.06}));
+  ctx.beginPath();expanded.forEach((point,index)=>index?ctx.lineTo(point.sx,point.sy):ctx.moveTo(point.sx,point.sy));ctx.closePath();ctx.fillStyle=classColor(name);ctx.globalAlpha=.13;ctx.fill();ctx.globalAlpha=.42;ctx.strokeStyle=classColor(name);ctx.lineWidth=1.2;ctx.stroke();ctx.globalAlpha=1;
+}
+function drawUmap(payload){
+  const canvas=$('umapCanvas'),width=Math.max(760,canvas.parentElement.clientWidth-2),height=720,ctx=prepareCanvas(canvas,width,height),padding=52;
+  const points=payload.pair_ids.map((pair,index)=>({pair:Number(pair),x:Number(payload.x[index]),y:Number(payload.y[index]),cluster:payload.clusters?String(payload.clusters[index]):macroClass(indexData._pairs.get(Number(pair))),meta:indexData._pairs.get(Number(pair))}));
+  const xs=points.map(point=>point.x),ys=points.map(point=>point.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys),spanX=Math.max(maxX-minX,1e-6),spanY=Math.max(maxY-minY,1e-6);
+  points.forEach(point=>{point.sx=padding+(point.x-minX)/spanX*(width-2*padding);point.sy=height-padding-(point.y-minY)/spanY*(height-2*padding)});
+  ctx.clearRect(0,0,width,height);ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);ctx.strokeStyle='#cbd5e1';ctx.strokeRect(padding,padding,width-2*padding,height-2*padding);
+  const groups=new Map();points.forEach(point=>{if(!groups.has(point.cluster))groups.set(point.cluster,[]);groups.get(point.cluster).push(point)});
+  const orderedNames=[...MACRO_CLASS_ORDER.filter(name=>groups.has(name)),...[...groups.keys()].filter(name=>!MACRO_CLASS_ORDER.includes(name)).sort((a,b)=>a.localeCompare(b))];
+  orderedNames.filter(name=>name!=='Other').forEach(name=>drawClusterRegion(ctx,groups.get(name),name));
+  points.forEach(point=>{ctx.beginPath();ctx.arc(point.sx,point.sy,3.2,0,Math.PI*2);ctx.fillStyle=classColor(point.cluster);ctx.globalAlpha=.82;ctx.fill()});ctx.globalAlpha=1;
+  const representatives=orderedNames.filter(name=>name!=='Other').map(name=>{const items=groups.get(name),cx=items.reduce((sum,item)=>sum+item.sx,0)/items.length,cy=items.reduce((sum,item)=>sum+item.sy,0)/items.length,point=items.reduce((best,item)=>(item.sx-cx)**2+(item.sy-cy)**2<(best.sx-cx)**2+(best.sy-cy)**2?item:best,items[0]);return{name,point}});
+  ctx.font='600 12px system-ui';ctx.textAlign='left';ctx.textBaseline='bottom';representatives.forEach(({name,point})=>{const measure=ctx.measureText(name);ctx.fillStyle='rgba(255,255,255,.9)';ctx.fillRect(point.sx+5,point.sy-16,measure.width+6,16);ctx.fillStyle='#334155';ctx.fillText(name,point.sx+8,point.sy-2)});
+  canvas._umapMeta={points,width,height};
+  $('umapLegend').innerHTML=orderedNames.map(name=>`<span class="legend-item"><span class="legend-dot" style="background:${classColor(name)}"></span>${esc(name)} (${groups.get(name).length})</span>`).join('');
+}
+function bindUmapTooltip(canvas){canvas.addEventListener('mousemove',event=>{const meta=canvas._umapMeta;if(!meta)return;const rect=canvas.getBoundingClientRect(),x=(event.clientX-rect.left)*meta.width/rect.width,y=(event.clientY-rect.top)*meta.height/rect.height;let best=null,bestDistance=Infinity;for(const point of meta.points){const distance=(point.sx-x)**2+(point.sy-y)**2;if(distance<bestDistance){best=point;bestDistance=distance}}if(!best||bestDistance>100){$('tooltip').style.display='none';return}const original=macroClass(best.meta),outlier=best.cluster==='Other'&&original!=='Other'?` · outlier from ${original}`:'';$('tooltip').innerHTML=`<strong>${esc(pairLabel(best.pair))}</strong><br>${esc(best.cluster+outlier)}<br>${esc(featureClass(best.meta))}<br>pair ${best.pair} · UMAP (${best.x.toFixed(3)}, ${best.y.toFixed(3)})`;$('tooltip').style.display='block';$('tooltip').style.left=`${Math.min(window.innerWidth-440,event.clientX+14)}px`;$('tooltip').style.top=`${Math.min(window.innerHeight-90,event.clientY+14)}px`});canvas.addEventListener('mouseleave',()=>{$('tooltip').style.display='none'})}
+
+async function renderUmap(){
+  if(!analysisManifest)return;
+  const layer=Number($('umapLayer').value),path=analysisManifest.umap_embeddings&&analysisManifest.umap_embeddings[String(layer)];
+  if(!path){$('umapStatus').textContent='No UMAP embedding is available for this layer.';$('umapStatus').hidden=false;$('umapContent').hidden=true;return}
+  $('umapStatus').textContent='Loading UMAP…';$('umapStatus').hidden=false;$('umapContent').hidden=true;
+  try{currentUmap=await matrix(path);$('umapContent').hidden=false;drawUmap(currentUmap);$('umapStatus').hidden=true}catch(error){$('umapStatus').textContent=`Could not load UMAP: ${error.message}`;$('umapStatus').hidden=false;$('umapContent').hidden=true}
+}
+
+async function load(){
+  indexData=await fetchJson('index.json');indexData._pairs=new Map(indexData.pairs.map(row=>[Number(row.pair),row]));setupClassFilter();setupClassFilter('analysisClassFilter');setupClassFilter('topClassFilter');
+  setOptions($('response'),indexData.responses,item=>item.key,item=>`${item.benchmark}/${item.id} · ${correctnessLabel(item.correct)}`);setOptions($('layer'),indexData.layers,value=>value,value=>`L${value}`);setOptions($('method'),indexData.methods,value=>value,value=>value);setOptions($('activationScale'),activationScales,item=>item.value,item=>item.label);$('activationScale').value='standardized';setOptions($('traceScope'),traceScopes,item=>item.value,item=>item.label);$('traceScope').value='reasoning';
+  $('response').addEventListener('change',refreshResponse);$('layer').addEventListener('change',()=>{resetTokenPanel();updatePairs();renderResponse()});$('method').addEventListener('change',()=>{resetTokenPanel();updatePairs();renderResponse()});$('activationScale').addEventListener('change',()=>{updatePairs();renderResponse()});$('traceScope').addEventListener('change',()=>{resetTokenPanel();renderResponse()});$('classFilter').addEventListener('change',()=>{normalizeClassSelection();updatePairs();renderResponse()});$('pair').addEventListener('change',renderResponse);
+  bindHeatmapTooltip($('scenarioHeatmap'));bindHeatmapTooltip($('similarityHeatmap'));bindBarTooltip($('topAll'));bindBarTooltip($('topCorrect'));bindBarTooltip($('topIncorrect'));bindUmapTooltip($('umapCanvas'));
+  await refreshResponse();
+  try{
+    analysisManifest=await fetchJson(indexData.analysis_manifest);
+    setOptions($('analysisBenchmark'),analysisManifest.benchmarks,item=>item.name,item=>`${item.name} (${item.responses.length} examples)`);setOptions($('analysisLayer'),analysisManifest.layers,value=>value,value=>`L${value}`);setOptions($('analysisMethod'),analysisManifest.methods,value=>value,value=>value);setOptions($('analysisScale'),activationScales,item=>item.value,item=>item.label);$('analysisScale').value='standardized';setOptions($('topBenchmark'),analysisManifest.benchmarks,item=>item.name,item=>`${item.name} (${item.responses.length} examples)`);setOptions($('topLayer'),[{value:'average',label:`Average L${analysisManifest.layers.join(', L')}`},...analysisManifest.layers.map(value=>({value:String(value),label:`Layer ${value}`}))],item=>item.value,item=>item.label);$('topLayer').value='average';setOptions($('topScale'),topScales,item=>item.value,item=>item.label);$('topScale').value='z_score';setOptions($('umapLayer'),analysisManifest.layers,value=>value,value=>`L${value}`);
+    $('analysisBenchmark').addEventListener('change',renderAnalysis);$('analysisLayer').addEventListener('change',renderAnalysis);$('analysisMethod').addEventListener('change',renderAnalysis);$('analysisScale').addEventListener('change',renderAnalysis);$('analysisClassFilter').addEventListener('change',()=>{normalizeClassSelection('analysisClassFilter');renderAnalysis()});$('topBenchmark').addEventListener('change',renderTopConcepts);$('topLayer').addEventListener('change',renderTopConcepts);$('topScale').addEventListener('change',renderTopConcepts);$('topClassFilter').addEventListener('change',()=>{normalizeClassSelection('topClassFilter');renderTopConcepts()});$('umapLayer').addEventListener('change',renderUmap);
+    $('analysisStatus').textContent='Analysis matrices are ready.';$('topStatus').textContent='Top-concept summaries are ready.';$('umapStatus').textContent='UMAP embeddings are ready.';
+  }catch(error){$('analysisStatus').textContent=`Analysis tab is unavailable: ${error.message}`;$('topStatus').textContent=`Top-concept tab is unavailable: ${error.message}`;$('umapStatus').textContent=`UMAP tab is unavailable: ${error.message}`}
+}
+window.addEventListener('resize',()=>{if(currentUmap&&!$('umap-tab').hidden)drawUmap(currentUmap)});
+load().catch(error=>{document.body.innerHTML=`<main><h1>Viewer error</h1><pre>${esc(error.stack||error.message)}</pre></main>`});
+</script>
+</body>
+</html>
