@@ -15,6 +15,7 @@ class Tokenizer:
 
 def main() -> None:
     assert thinking_span(Tokenizer(), [9, 1, 3, 2], 4) == (2, 3, "closed_thinking")
+    assert ConceptScorer.finish.__defaults__[-1] == "thinking"
     with tempfile.TemporaryDirectory() as directory:
         writer = AnalysisWriter(Path(directory), "-check")
         writer.add_highlights([{"benchmark": "x", "id": "0", "method": "diff", "layer": 11, "token_index": 0, "token": "x", "pair": 0, "cosine": 0.1, "polarity": "positive"}])
@@ -24,6 +25,7 @@ def main() -> None:
         assert (Path(directory) / "token_highlights-check.parquet").exists()
     with tempfile.TemporaryDirectory() as directory:
         scorer = object.__new__(ConceptScorer)
+        scorer.methods = METHODS
         scorer.pair_ids = [0, 1]
         scorer.captured_tokens = 0
         scorer.captured = {layer: [torch.ones(4), torch.ones(4)] for layer in LAYERS}

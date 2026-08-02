@@ -47,13 +47,16 @@ class AnalysisResult:
 class ConceptScorer:
     """Hooks requested residual streams and scores them without saving activations."""
 
-    def __init__(self, model: Any, tokenizer: Any, device: torch.device, trace_root: Path, highlights_per_sign: int = 3, pair_ids: list[int] | None = None, activation_chunk_size: int = 128) -> None:
+    def __init__(self, model: Any, tokenizer: Any, device: torch.device, trace_root: Path, highlights_per_sign: int = 3, pair_ids: list[int] | None = None, activation_chunk_size: int = 128, methods: tuple[str, ...] = METHODS) -> None:
         self.model = model
         self.tokenizer = tokenizer
         self.device = device
         self.trace_root = trace_root
         self.highlights_per_sign = highlights_per_sign
         self.activation_chunk_size = activation_chunk_size
+        self.methods = methods
+        if not self.methods or any(method not in METHODS for method in self.methods):
+            raise ValueError(f"methods must be a non-empty subset of {METHODS}")
         if activation_chunk_size < 1:
             raise ValueError("activation_chunk_size must be at least 1")
         self.pairs = pd.read_parquet(_download("pairs.parquet"))
@@ -64,7 +67,7 @@ class ConceptScorer:
             raise ValueError("Concept pair IDs must be between 0 and 1035")
         self.vectors = self._load_vectors()
         self.combined_vectors = {
-            layer: torch.cat([self.vectors[method, layer][self.pair_ids] for method in METHODS], dim=0)
+            layer: torch.cat([self.vectors[method, layer][self.pair_ids] for method in self.methods], dim=0)
             for layer in LAYERS
         }
         self.captured: dict[int, list[torch.Tensor]] = {layer: [] for layer in LAYERS}
@@ -112,7 +115,7 @@ class ConceptScorer:
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.streams = {
             (method, layer): (self.temp_dir / f"{method}-L{layer}.bin").open("wb")
-            for method in METHODS for layer in LAYERS
+            for method in self.methods for layer in LAYERS
         }
         blocks = self.model.model.layers
         self.handles = [blocks[layer - 1].register_forward_hook(self._hook(layer)) for layer in LAYERS]
@@ -124,7 +127,7 @@ class ConceptScorer:
         for layer in LAYERS:
             hidden = F.normalize(torch.stack(self.captured[layer][:count]).float(), dim=-1)
             projected = hidden @ self.combined_vectors[layer].T
-            for method_index, method in enumerate(METHODS):
+            for method_index, method in enumerate(self.methods):
                 scores = projected[:, method_index * len(self.pair_ids) : (method_index + 1) * len(self.pair_ids)]
                 scores.detach().to(dtype=torch.float16).cpu().numpy().tofile(self.streams[method, layer])
             del self.captured[layer][:count]
@@ -154,6 +157,7 @@ class ConceptScorer:
         benchmark: str,
         example_id: str,
         write_highlights: Callable[[list[dict[str, Any]]], None] | None = None,
+        span_mode: str = "thinking",
     ) -> AnalysisResult:
         analysis_started = time.perf_counter()
         for handle in self.handles:
@@ -164,7 +168,12 @@ class ConceptScorer:
         # A cached forward on generated token i produces the residual for token i.
         available = min(len(continuation), self.captured_tokens)
         token_ids = continuation[:available].tolist()
-        start, end, status = thinking_span(self.tokenizer, continuation.tolist(), available)
+        if span_mode == "thinking":
+            start, end, status = thinking_span(self.tokenizer, continuation.tolist(), available)
+        elif span_mode == "continuation":
+            start, end, status = 0, available, "whole_continuation"
+        else:
+            raise ValueError("span_mode must be 'thinking' or 'continuation'")
         if start is None:
             self._cleanup_temp()
             return AnalysisResult(0, status, [], {}, [], [])
@@ -172,14 +181,14 @@ class ConceptScorer:
             self._cleanup_temp()
             return AnalysisResult(0, "empty_thinking", [], {}, [], [])
         n_pairs = len(self.pair_ids)
-        sums = {(method, layer): np.zeros(n_pairs, dtype=np.float32) for method in METHODS for layer in LAYERS}
-        mins = {(method, layer): np.full(n_pairs, np.inf, dtype=np.float32) for method in METHODS for layer in LAYERS}
-        maxs = {(method, layer): np.full(n_pairs, -np.inf, dtype=np.float32) for method in METHODS for layer in LAYERS}
-        histograms = {(method, layer): np.zeros(1024, dtype=np.int64) for method in METHODS for layer in LAYERS}
+        sums = {(method, layer): np.zeros(n_pairs, dtype=np.float32) for method in self.methods for layer in LAYERS}
+        mins = {(method, layer): np.full(n_pairs, np.inf, dtype=np.float32) for method in self.methods for layer in LAYERS}
+        maxs = {(method, layer): np.full(n_pairs, -np.inf, dtype=np.float32) for method in self.methods for layer in LAYERS}
+        histograms = {(method, layer): np.zeros(1024, dtype=np.int64) for method in self.methods for layer in LAYERS}
         highlights: list[dict[str, Any]] = []
         trace_dir = self.trace_root / benchmark / str(example_id)
         trace_dir.mkdir(parents=True, exist_ok=True)
-        for method in METHODS:
+        for method in self.methods:
             for layer in LAYERS:
                 source = np.memmap(self.temp_dir / f"{method}-L{layer}.bin", dtype=np.float16, mode="r", shape=(self.captured_tokens, n_pairs))
                 target = np.lib.format.open_memmap(trace_dir / f"{method}-L{layer}.tmp.npy", mode="w+", dtype=np.float16, shape=(end - start, n_pairs))
@@ -199,7 +208,7 @@ class ConceptScorer:
                 del source, target
                 (trace_dir / f"{method}-L{layer}.tmp.npy").replace(trace_dir / f"{method}-L{layer}.npy")
         rows = []
-        for method in METHODS:
+        for method in self.methods:
             for layer in LAYERS:
                 key = method, layer
                 means = (sums[key] / (end - start)).tolist()

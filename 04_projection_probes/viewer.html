@@ -1,0 +1,73 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AIME projection probes</title>
+<style>
+:root{color-scheme:light;font:15px system-ui,sans-serif;color:#172033;background:#f8fafc}
+body{margin:0}.page{max-width:1500px;margin:auto;padding:24px}.controls{display:flex;gap:14px;flex-wrap:wrap;align-items:end;background:white;border:1px solid #dbe2ea;border-radius:10px;padding:14px;position:sticky;top:0;z-index:2}.control{display:grid;gap:4px}.control label,.muted{color:#5b6577;font-size:13px}select,input{font:inherit;padding:7px;border:1px solid #bdc7d5;border-radius:6px;background:white}select{max-width:560px}.layout{display:grid;grid-template-columns:340px 1fr;gap:18px;margin-top:18px}.panel{background:white;border:1px solid #dbe2ea;border-radius:10px;padding:16px}.responses{max-height:70vh;overflow:auto}.response{width:100%;display:grid;grid-template-columns:1fr auto;text-align:left;padding:9px;margin:0 0 6px;border:1px solid #dbe2ea;border-radius:7px;background:white;cursor:pointer}.response:hover,.response.active{border-color:#2563eb;background:#eff6ff}.correct{color:#067647}.incorrect{color:#b42318}.trace{line-height:2.15;white-space:pre-wrap;overflow-wrap:anywhere}.tok{padding:2px 0;border-radius:2px}.segment{border-top:1px solid #e5e7eb;margin-top:14px;padding-top:10px}.segment h3{margin:0 0 8px;font-size:14px;color:#49566a}.badge{display:inline-block;padding:2px 7px;border-radius:999px;background:#eef2f7;font-size:12px}h1{margin:0 0 4px;font-size:25px}h2{font-size:18px;margin-top:0}@media(max-width:850px){.layout{grid-template-columns:1fr}.responses{max-height:300px}.controls{position:static}}
+</style>
+<div class="page">
+  <h1>AIME article-style projection probes</h1>
+  <p id="description" class="muted"></p>
+  <div class="controls">
+    <div class="control"><label for="layer">Layer</label><select id="layer"></select></div>
+    <div class="control"><label for="search">Find concept</label><input id="search" placeholder="Type a concept name"></div>
+    <div class="control"><label for="concept">Concept, ranked by global mean</label><select id="concept"></select></div>
+  </div>
+  <div class="layout">
+    <aside class="panel">
+      <h2>Responses by mean thinking activation</h2>
+      <div id="responses" class="responses"></div>
+    </aside>
+    <main class="panel">
+      <h2 id="title">Select a response</h2>
+      <p id="meta" class="muted"></p>
+      <div id="trace"></div>
+    </main>
+  </div>
+</div>
+<script>
+let index, selectedResponse;
+const $=id=>document.getElementById(id);
+const esc=value=>String(value).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function conceptMap(){return new Map(index.concepts.map(x=>[x.pair,x]))}
+function meanFor(id,layer,pair){return index.means[`${id}:L${layer}`][pair]}
+function populateConcepts(){
+  const layer=$('layer').value,q=$('search').value.trim().toLowerCase(),byPair=conceptMap();
+  const rows=index.rankings[layer].map(pair=>byPair.get(pair)).filter(x=>!q||x.concept.toLowerCase().includes(q)||x.antagonist.toLowerCase().includes(q));
+  const previous=+$('concept').value;
+  $('concept').innerHTML=rows.map(x=>{const mean=index.responses.reduce((sum,r)=>sum+meanFor(r.id,layer,x.pair),0)/index.responses.length;return `<option value="${x.pair}">${esc(x.concept)} ↔ ${esc(x.antagonist)} · ${mean.toFixed(3)}</option>`}).join('');
+  if(rows.some(x=>x.pair===previous))$('concept').value=previous;
+}
+function rankResponses(){
+  if(!$('concept').options.length){$('responses').innerHTML='<p class="muted">No matching concepts.</p>';$('trace').innerHTML='';return}
+  const layer=+$('layer').value,pair=+$('concept').value;
+  const rows=[...index.responses].sort((a,b)=>meanFor(b.id,layer,pair)-meanFor(a.id,layer,pair));
+  $('responses').innerHTML=rows.map((r,i)=>`<button class="response ${r.id===selectedResponse?'active':''}" data-id="${r.id}"><span><b>#${i+1} · AIME/${r.id}</b><br><span class="${r.correct?'correct':'incorrect'}">${r.correct?'correct':'incorrect'}</span> · ${r.reasoning_tokens.toLocaleString()} thinking tokens</span><span>${meanFor(r.id,layer,pair).toFixed(3)}</span></button>`).join('');
+  for(const button of $('responses').querySelectorAll('button'))button.onclick=()=>show(button.dataset.id);
+  if(!selectedResponse&&rows.length)show(rows[0].id);
+}
+function renderSegment(label,tokens,values,scale){
+  const spans=tokens.map((token,i)=>{const value=values[i],strength=Math.min(Math.abs(value)/scale,1),color=value>=0?`rgba(220,38,38,${strength})`:`rgba(37,99,235,${strength})`;return `<span class="tok" title="raw projection ${value.toFixed(5)}" style="background:${color}">${esc(token)}</span>`}).join('');
+  return `<section class="segment"><h3>${label}</h3><div class="trace">${spans}</div></section>`;
+}
+async function show(id){
+  selectedResponse=id;rankResponses();
+  const layer=+$('layer').value,pair=+$('concept').value,concept=conceptMap().get(pair),response=index.responses.find(x=>x.id===id);
+  $('title').textContent=`${concept.concept} — AIME/${id}`;
+  $('meta').innerHTML=`<span class="badge ${response.correct?'correct':'incorrect'}">${response.correct?'correct':'incorrect'}</span> mean thinking projection ${meanFor(id,layer,pair).toFixed(5)} · L${layer}`;
+  $('trace').innerHTML='<p class="muted">Loading trace…</p>';
+  const data=await(await fetch(`/api/trace?id=${encodeURIComponent(id)}&layer=${layer}&pair=${pair}`)).json();
+  const s=data.thinking_start,e=data.thinking_end;
+  $('trace').innerHTML=renderSegment('Assistant preamble',data.tokens.slice(0,s),data.values.slice(0,s),data.color_scale)+renderSegment('Thinking',data.tokens.slice(s,e),data.values.slice(s,e),data.color_scale)+renderSegment('Final answer and remaining output',data.tokens.slice(e),data.values.slice(e),data.color_scale);
+}
+async function load(){
+  index=await(await fetch('index.json')).json();$('description').textContent=index.description;
+  $('layer').innerHTML=index.layers.map(x=>`<option value="${x}">L${x}</option>`).join('');
+  $('layer').onchange=()=>{populateConcepts();selectedResponse=null;rankResponses()};
+  $('search').oninput=()=>{populateConcepts();selectedResponse=null;rankResponses()};
+  $('concept').onchange=()=>{selectedResponse=null;rankResponses()};
+  populateConcepts();rankResponses();
+}
+load();
+</script>
