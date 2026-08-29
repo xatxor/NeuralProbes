@@ -21,7 +21,7 @@ from safetensors.torch import load_file
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT.parent / "01_eval"))
+sys.path.insert(0, str(ROOT.parent.parent / "vika" / "01_eval"))
 
 from concept_analysis import LAYERS, VECTOR_REPO, VECTOR_REVISION, thinking_span  # noqa: E402
 from evaluate import MODEL_ID, instruction, load_benchmark, score, visible_gpu_ids  # noqa: E402
