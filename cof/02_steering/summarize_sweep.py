@@ -16,9 +16,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
-evaluation = ROOT.parent / "01_eval"
+evaluation = ROOT.parent.parent / "01_eval"
 if not evaluation.exists():
-    evaluation = ROOT.parent / "vika" / "01_eval"
+    evaluation = ROOT.parent.parent / "vika" / "01_eval"
 sys.path.insert(0, str(evaluation))
 
 import summarize  # noqa: E402
