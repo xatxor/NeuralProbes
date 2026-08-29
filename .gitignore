@@ -101,3 +101,8 @@ main.pdf
 *.synctex.gz
 *.synctex(busy)
 *.nav
+
+# Claude Code / Anthropic config
+.claude/
+.anthropic/
+claude.log
