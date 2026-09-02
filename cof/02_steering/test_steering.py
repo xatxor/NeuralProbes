@@ -13,14 +13,14 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import steer
-from steer import ALPHAS, CONCEPTS, DEFAULT_CONCEPT_PAIRS, DEFAULT_LAYERS, LAYERS, Steerer, condition_specs, task_key, worker_command
+from steer import ALPHAS, CONCEPTS, DEFAULT_CONCEPT_PAIRS, DEFAULT_LAYERS, Steerer, condition_specs, task_key, worker_command
 from summarize import plot_results, summarize
 
 
 def main() -> None:
     conditions = condition_specs(list(DEFAULT_CONCEPT_PAIRS), list(DEFAULT_LAYERS), list(ALPHAS))
-    assert len(conditions) == 139
-    assert {len((conditions * 30)[worker::10]) for worker in range(10)} == {417}
+    assert len(conditions) == 1763
+    assert {len((conditions * 30)[worker::10]) for worker in range(10)} == {5289}
     assert sum(row["alpha"] == 0 for row in conditions) == 3
     assert all(
         row["alpha"] == 0 or (row["pair"] is not None and row["layer"] is not None)
@@ -46,8 +46,9 @@ def main() -> None:
     args = SimpleNamespace(
         benchmark="math_500", num_workers=4, concept_pairs=list(DEFAULT_CONCEPT_PAIRS),
         layers=list(DEFAULT_LAYERS), alphas=list(ALPHAS), baseline_repeats=1, limit=1,
+        vector_dir=Path("/fake/vector/dir"),
     )
-    assert "--alphas=-0.2,-0.1,0.1,0.2" in worker_command(args, 0)
+    assert "--alphas=-5.0,-4.5,-4.0,-3.5,-3.0,-2.5,-2.0,-1.5,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0" in worker_command(args, 0)
 
     rows = pd.DataFrame(
         [
@@ -70,7 +71,7 @@ def main() -> None:
         steer.RESULTS = root
         (root / "steering.jsonl").write_text('{"key": "previous"}\n')
         (root / "steering.worker-00-of-01.jsonl").write_text("")
-        steer.merge_shards(SimpleNamespace(num_workers=1, worker_index=None), [])
+        steer.merge_shards(SimpleNamespace(num_workers=1, worker_index=None), [], "test-capture-key")
         assert (root / "steering.jsonl").read_text() == '{"key": "previous"}\n'
         steer.RESULTS = old_results
     print("steering checks passed")

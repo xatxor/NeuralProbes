@@ -101,3 +101,7 @@ main.pdf
 *.synctex.gz
 *.synctex(busy)
 *.nav
+
+# Concept-vector artifacts (large, generated, never checked in)
+*.safetensors
+*.parquet

@@ -1,22 +1,33 @@
 # Qwen3-8B CoT steering
 
-This experiment adds one normalized `diff` concept vector at one residual-stream
-layer at a time. Positive alpha steers toward the named concept; negative alpha
-steers toward its antagonist. Strength is measured as a fraction of the layer's
-average residual-stream norm.
+This experiment adds one raw `diff` concept vector at one residual-stream
+layer at a time, unscaled. Positive alpha steers toward the named concept;
+negative alpha steers toward its antagonist. Strength is measured in multiples
+of the concept's own difference-vector norm at that layer (`alpha=1` adds a
+vector exactly as large as the pair's natural `diff` vector) — not a fraction
+of the residual-stream norm.
 
-The default matrix is three baseline repeats plus 16 CoT concepts and the
-`joy` control, layers 18 and 25, and four nonzero strengths (-0.2, -0.1, 0.1,
-0.2): 139 generations per question.
+Vectors are read from a local directory (`--vector-dir`), not Hugging Face
+Hub: `manifest.json`, `diff.safetensors`, `pairs.parquet` produced by the
+probes pipeline. Pass the directory that matches the presentation you want
+(e.g. `Qwen_Qwen3-8B--assistant--semantic`).
+
+The default matrix is three baseline repeats plus 16 CoT concepts, the `joy`
+control, and 5 random sanity-check concepts (seed 2026, unrelated to
+reasoning), layers 11/14/18/22/25, and sixteen nonzero strengths (±1.5, ±2,
+±2.5, ±3, ±3.5, ±4, ±4.5, ±5): 1,763 generations per question. This is a lot —
+run a small pilot before committing to the full grid on a full dataset.
 
 ```bash
 # Quick smoke test: one question, one concept, one layer, baseline + one strength
 uv run python 02_steering/steer.py \
-  --benchmark aime_2024 --limit 1 \
-  --concept-pairs 367 --layers 22 --alphas 0,0.05
+  --benchmark aime_2024 --limit 1 --baseline-repeats 1 \
+  --concept-pairs 367 --layers 18 --alphas 1.5 \
+  --vector-dir /path/to/Qwen_Qwen3-8B--assistant--semantic
 
 # Full four-GPU experiment
-uv run python 02_steering/steer.py --benchmark all --num-workers 4
+uv run python 02_steering/steer.py --benchmark all --num-workers 4 \
+  --vector-dir /path/to/Qwen_Qwen3-8B--assistant--semantic
 
 # Build aggregate tables plus reasoning-length and accuracy plots
 uv run python 02_steering/summarize.py
@@ -26,7 +37,9 @@ uv run python 02_steering/test_steering.py
 ```
 
 Results are appended under `02_steering/results/`. Re-running the same command
-resumes completed condition/question pairs.
+resumes completed condition/question pairs; a change of `--vector-dir` (or any
+vector recapture, tracked via the manifest's `capture_merge_key`) invalidates
+old records automatically rather than silently reusing them.
 
 Summaries use the three alpha-zero generations per question as the baseline;
 override them with `--baseline-repeats`. Pair `532` (`joy`, versus `sadness`)

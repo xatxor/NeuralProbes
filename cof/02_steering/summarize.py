@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-from steer import RESULTS, STEERING_VERSION, VECTOR_REVISION, iter_records  # noqa: E402
+from steer import RESULTS, STEERING_VERSION, iter_records  # noqa: E402
 
 BOOTSTRAP_SAMPLES = 2_000
 
@@ -190,7 +190,7 @@ def main() -> None:
     records = {}
     for path in files:
         for row in iter_records(path):
-            if row.get("steering_version") == STEERING_VERSION and row.get("vector_revision") == VECTOR_REVISION:
+            if row.get("steering_version") == STEERING_VERSION:
                 records[row["key"]] = {column: row.get(column) for column in columns}
     if not records:
         raise SystemExit(f"No compatible records found under {RESULTS}")

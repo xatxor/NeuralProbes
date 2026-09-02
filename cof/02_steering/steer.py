@@ -15,19 +15,17 @@ from typing import Any
 
 import pandas as pd
 import torch
-import torch.nn.functional as F
-from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent.parent / "vika" / "01_eval"))
 
-from concept_analysis import LAYERS, VECTOR_REPO, VECTOR_REVISION, thinking_span  # noqa: E402
+from concept_analysis import thinking_span  # noqa: E402
 from evaluate import MODEL_ID, instruction, load_benchmark, score, visible_gpu_ids  # noqa: E402
 
 RESULTS = ROOT / "results"
-STEERING_VERSION = 1
+STEERING_VERSION = 2
 CONCEPTS = {
     367: "faithful chain-of-thought",
     960: "transparent chain-of-thought",
@@ -46,11 +44,18 @@ CONCEPTS = {
     878: "slow thinking",
     459: "honest admission of not knowing",
     532: "joy",
+    # random sanity-check concepts, unrelated to CoT process, seed=2026
+    340: "eval-oblivious behavior",
+    426: "good-faith red teamer",
+    444: "healer",
+    951: "training-time honesty about objectives",
+    964: "treating benchmarks as ordinary tasks",
 }
 DEFAULT_CONCEPT_PAIRS = tuple(CONCEPTS)
-DEFAULT_LAYERS = (18, 25)
+DEFAULT_LAYERS = (11, 14, 18, 22, 25)
 DEFAULT_BASELINE_REPEATS = 3
-ALPHAS = (-0.2, -0.1, 0.1, 0.2)
+VALID_LAYERS = tuple(range(37))
+ALPHAS = (-5.0, -4.5, -4.0, -3.5, -3.0, -2.5, -2.0, -1.5, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0)
 
 
 def comma_values(text: str, cast: Any) -> list[Any]:
@@ -73,6 +78,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--layers", default=",".join(map(str, DEFAULT_LAYERS)))
     parser.add_argument("--alphas", default=",".join(map(str, ALPHAS)))
     parser.add_argument("--baseline-repeats", type=int, default=DEFAULT_BASELINE_REPEATS)
+    parser.add_argument("--vector-dir", type=Path, required=True, help="Directory with manifest.json, diff.safetensors, pairs.parquet")
     args = parser.parse_args()
     args.concept_pairs = list(dict.fromkeys(comma_values(args.concept_pairs, int)))
     args.layers = list(dict.fromkeys(comma_values(args.layers, int)))
@@ -87,10 +93,12 @@ def parse_args() -> argparse.Namespace:
         parser.error("--worker-index must be in [0, num-workers)")
     if not set(args.concept_pairs) <= set(CONCEPTS):
         parser.error(f"--concept-pairs must be selected from {list(CONCEPTS)}")
-    if not set(args.layers) <= set(LAYERS):
-        parser.error(f"--layers must be selected from {list(LAYERS)}")
+    if not set(args.layers) <= set(VALID_LAYERS):
+        parser.error(f"--layers must be selected from {list(VALID_LAYERS)}")
     if not set(args.alphas) <= set(ALPHAS):
         parser.error(f"--alphas must be selected from {list(ALPHAS)}")
+    if not args.vector_dir.is_dir():
+        parser.error(f"--vector-dir {args.vector_dir} is not a directory")
     return args
 
 
@@ -153,13 +161,13 @@ def prompt_hash(task: dict[str, Any]) -> str:
     return hashlib.sha256(task["prompt"].encode()).hexdigest()
 
 
-def compatible(record: dict[str, Any], task: dict[str, Any]) -> bool:
+def compatible(record: dict[str, Any], task: dict[str, Any], capture_key: str) -> bool:
     return (
         record.get("key") == task_key(task)
         and record.get("model") == MODEL_ID
         and record.get("dtype") == "float16"
         and record.get("steering_version") == STEERING_VERSION
-        and record.get("vector_revision") == VECTOR_REVISION
+        and record.get("vector_capture_key") == capture_key
         and record.get("prompt_sha256") == prompt_hash(task)
     )
 
@@ -178,19 +186,27 @@ def result_path(args: argparse.Namespace) -> Path:
     return RESULTS / f"steering.worker-{args.worker_index:02d}-of-{args.num_workers:02d}.jsonl"
 
 
-def load_deltas(concepts: list[int], layers: list[int], device: torch.device) -> dict[tuple[int, int], torch.Tensor]:
-    pairs = pd.read_parquet(hf_hub_download(VECTOR_REPO, "pairs.parquet", revision=VECTOR_REVISION)).set_index("pair")
-    tensor = load_file(hf_hub_download(VECTOR_REPO, "diff.safetensors", revision=VECTOR_REVISION))["diff"]
-    if tuple(tensor.shape) != (len(LAYERS), 1036, 4096):
+def vector_manifest(vector_dir: Path) -> dict[str, Any]:
+    manifest = json.loads((vector_dir / "manifest.json").read_text(encoding="utf-8"))
+    if manifest["model"] != MODEL_ID or manifest["pairs"] != 1036 or manifest["hidden_size"] != 4096:
+        raise ValueError(f"Unexpected vector manifest at {vector_dir}: {manifest}")
+    return manifest
+
+
+def load_deltas(concepts: list[int], layers: list[int], vector_dir: Path, device: torch.device) -> dict[tuple[int, int], torch.Tensor]:
+    manifest = vector_manifest(vector_dir)
+    pairs = pd.read_parquet(vector_dir / "pairs.parquet").set_index("pair_id")
+    tensor = load_file(vector_dir / "diff.safetensors")["diff"]
+    if tuple(tensor.shape) != (manifest["layers"], 1036, 4096):
         raise ValueError(f"Unexpected diff vector shape: {tuple(tensor.shape)}")
     deltas = {}
     for pair in concepts:
         if pairs.loc[pair, "concept"] != CONCEPTS[pair]:
             raise ValueError(f"Concept metadata mismatch for pair {pair}")
         for layer in layers:
-            vector = tensor[LAYERS.index(layer), pair].float()
-            residual_norm = float(pairs.loc[pair, f"L{layer}_diff_norm"] / pairs.loc[pair, f"L{layer}_rel_norm"])
-            deltas[pair, layer] = (F.normalize(vector, dim=0) * residual_norm).to(device=device, dtype=torch.float16)
+            if layer >= manifest["layers"]:
+                raise ValueError(f"Layer {layer} not present in {vector_dir} (0..{manifest['layers'] - 1})")
+            deltas[pair, layer] = tensor[layer, pair].to(device=device, dtype=torch.float16)
     return deltas
 
 
@@ -225,7 +241,7 @@ def eos_ids(tokenizer: Any) -> set[int]:
 
 
 @torch.inference_mode()
-def generate(model: Any, tokenizer: Any, steerer: Steerer, task: dict[str, Any]) -> dict[str, Any]:
+def generate(model: Any, tokenizer: Any, steerer: Steerer, task: dict[str, Any], capture_key: str) -> dict[str, Any]:
     rendered = tokenizer.apply_chat_template(
         [{"role": "user", "content": task["prompt"]}],
         tokenize=False,
@@ -256,8 +272,7 @@ def generate(model: Any, tokenizer: Any, steerer: Steerer, task: dict[str, Any])
         "model": MODEL_ID,
         "dtype": "float16",
         "steering_version": STEERING_VERSION,
-        "vector_repo": VECTOR_REPO,
-        "vector_revision": VECTOR_REVISION,
+        "vector_capture_key": capture_key,
         "vector_method": "diff",
         "concept_pair": task["pair"],
         "concept": task["concept"],
@@ -277,6 +292,7 @@ def generate(model: Any, tokenizer: Any, steerer: Steerer, task: dict[str, Any])
 
 
 def run_worker(args: argparse.Namespace) -> None:
+    capture_key = vector_manifest(args.vector_dir)["capture_merge_key"]
     tasks = build_tasks(args)
     if args.worker_index is not None:
         tasks = tasks[args.worker_index :: args.num_workers]
@@ -285,7 +301,7 @@ def run_worker(args: argparse.Namespace) -> None:
     completed = {
         record["key"]
         for record in iter_records(path)
-        if record.get("key") in tasks_by_key and compatible(record, tasks_by_key[record["key"]])
+        if record.get("key") in tasks_by_key and compatible(record, tasks_by_key[record["key"]], capture_key)
     }
     pending = [task for task in tasks if task_key(task) not in completed]
     if not pending:
@@ -297,13 +313,14 @@ def run_worker(args: argparse.Namespace) -> None:
     deltas = load_deltas(
         sorted({task["pair"] for task in nonzero}),
         sorted({task["layer"] for task in nonzero}),
+        args.vector_dir,
         model.device,
     ) if nonzero else {}
     steerer = Steerer(model, deltas)
     RESULTS.mkdir(exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         for index, task in enumerate(pending, 1):
-            record = generate(model, tokenizer, steerer, task)
+            record = generate(model, tokenizer, steerer, task, capture_key)
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
             handle.flush()
             print(
@@ -331,13 +348,15 @@ def worker_command(args: argparse.Namespace, worker: int) -> list[str]:
         f"--alphas={','.join(map(str, args.alphas))}",
         "--baseline-repeats",
         str(args.baseline_repeats),
+        "--vector-dir",
+        str(args.vector_dir),
     ]
     if args.limit is not None:
         command.extend(["--limit", str(args.limit)])
     return command
 
 
-def seed_shards(args: argparse.Namespace, tasks: list[dict[str, Any]]) -> None:
+def seed_shards(args: argparse.Namespace, tasks: list[dict[str, Any]], capture_key: str) -> None:
     canonical = RESULTS / "steering.jsonl"
     if not canonical.exists():
         return
@@ -361,14 +380,14 @@ def seed_shards(args: argparse.Namespace, tasks: list[dict[str, Any]]) -> None:
             for line in source:
                 record = json.loads(line)
                 target = assigned.get(record.get("key"))
-                if target and compatible(record, target[1]):
+                if target and compatible(record, target[1], capture_key):
                     destinations[target[0]].write(line)
     finally:
         for handle in destinations.values():
             handle.close()
 
 
-def merge_shards(args: argparse.Namespace, tasks: list[dict[str, Any]]) -> None:
+def merge_shards(args: argparse.Namespace, tasks: list[dict[str, Any]], capture_key: str) -> None:
     tasks_by_key = {task_key(task): task for task in tasks}
     seen = set()
     destination = RESULTS / "steering.jsonl"
@@ -386,7 +405,7 @@ def merge_shards(args: argparse.Namespace, tasks: list[dict[str, Any]]) -> None:
                 for line in source:
                     record = json.loads(line)
                     key = record.get("key")
-                    if key in tasks_by_key and key not in seen and compatible(record, tasks_by_key[key]):
+                    if key in tasks_by_key and key not in seen and compatible(record, tasks_by_key[key], capture_key):
                         output.write(line)
                         seen.add(key)
     missing = [key for key in tasks_by_key if key not in seen]
@@ -397,12 +416,13 @@ def merge_shards(args: argparse.Namespace, tasks: list[dict[str, Any]]) -> None:
 
 
 def launch_workers(args: argparse.Namespace) -> None:
+    capture_key = vector_manifest(args.vector_dir)["capture_merge_key"]
     gpu_ids = visible_gpu_ids()
     if len(gpu_ids) < args.num_workers:
         raise RuntimeError(f"Requested {args.num_workers} workers, but only {len(gpu_ids)} GPUs are visible")
     tasks = build_tasks(args)
     RESULTS.mkdir(exist_ok=True)
-    seed_shards(args, tasks)
+    seed_shards(args, tasks, capture_key)
     processes = []
     for worker in range(args.num_workers):
         environment = os.environ.copy()
@@ -412,7 +432,7 @@ def launch_workers(args: argparse.Namespace) -> None:
     failures = [(worker, code) for worker, code in failures if code]
     if failures:
         raise RuntimeError(f"Steering workers failed: {failures}")
-    merge_shards(args, tasks)
+    merge_shards(args, tasks, capture_key)
 
 
 def main() -> None:
