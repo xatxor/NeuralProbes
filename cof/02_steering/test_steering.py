@@ -46,9 +46,15 @@ def main() -> None:
     args = SimpleNamespace(
         benchmark="math_500", num_workers=4, concept_pairs=list(DEFAULT_CONCEPT_PAIRS),
         layers=list(DEFAULT_LAYERS), alphas=list(ALPHAS), baseline_repeats=1, limit=1,
-        vector_dir=Path("/fake/vector/dir"),
+        vector_dir=Path("/fake/vector/dir"), disable_loop_detection=False, loop_ngram_size=4,
+        loop_window_tokens=1024, loop_unique_ratio_threshold=0.2, loop_check_every=64,
+        loop_consecutive_windows=3, loop_min_new_tokens=2048, loop_extra_tokens=512,
     )
-    assert "--alphas=-5.0,-4.5,-4.0,-3.5,-3.0,-2.5,-2.0,-1.5,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0" in worker_command(args, 0)
+    command = worker_command(args, 0)
+    assert "--alphas=-5.0,-4.5,-4.0,-3.5,-3.0,-2.5,-2.0,-1.5,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0" in command
+    assert "--loop-window-tokens" in command and "--disable-loop-detection" not in command
+    assert steer.loop_options(args)["unique_ratio_threshold"] == 0.2
+    assert steer.loop_options(SimpleNamespace(**{**vars(args), "disable_loop_detection": True})) is None
 
     rows = pd.DataFrame(
         [

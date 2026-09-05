@@ -16,13 +16,20 @@ from typing import Any
 import pandas as pd
 import torch
 from safetensors.torch import load_file
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteriaList
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent.parent / "vika" / "01_eval"))
 
 from concept_analysis import thinking_span  # noqa: E402
-from evaluate import MODEL_ID, instruction, load_benchmark, score, visible_gpu_ids  # noqa: E402
+from evaluate import (  # noqa: E402
+    MODEL_ID,
+    UniqueNGramLoopDetector,
+    instruction,
+    load_benchmark,
+    score,
+    visible_gpu_ids,
+)
 
 RESULTS = ROOT / "results"
 STEERING_VERSION = 2
@@ -79,6 +86,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--alphas", default=",".join(map(str, ALPHAS)))
     parser.add_argument("--baseline-repeats", type=int, default=DEFAULT_BASELINE_REPEATS)
     parser.add_argument("--vector-dir", type=Path, required=True, help="Directory with manifest.json, diff.safetensors, pairs.parquet")
+    parser.add_argument(
+        "--disable-loop-detection",
+        action="store_true",
+        help="Disable online low-diversity loop detection.",
+    )
+    parser.add_argument("--loop-ngram-size", type=int, default=4)
+    parser.add_argument("--loop-window-tokens", type=int, default=1024)
+    parser.add_argument("--loop-unique-ratio-threshold", type=float, default=0.20)
+    parser.add_argument("--loop-check-every", type=int, default=64)
+    parser.add_argument("--loop-consecutive-windows", type=int, default=3)
+    parser.add_argument(
+        "--loop-extra-tokens",
+        type=int,
+        default=512,
+        help="Tokens retained after loop detection so several repeated phrases remain analyzable.",
+    )
+    parser.add_argument("--loop-min-new-tokens", type=int, default=2048)
     args = parser.parse_args()
     args.concept_pairs = list(dict.fromkeys(comma_values(args.concept_pairs, int)))
     args.layers = list(dict.fromkeys(comma_values(args.layers, int)))
@@ -240,8 +264,29 @@ def eos_ids(tokenizer: Any) -> set[int]:
     return set(value if isinstance(value, list) else [value])
 
 
+def loop_options(args: argparse.Namespace) -> dict[str, Any] | None:
+    if args.disable_loop_detection:
+        return None
+    return {
+        "ngram_size": args.loop_ngram_size,
+        "window_tokens": args.loop_window_tokens,
+        "unique_ratio_threshold": args.loop_unique_ratio_threshold,
+        "check_every": args.loop_check_every,
+        "consecutive_windows": args.loop_consecutive_windows,
+        "min_new_tokens": args.loop_min_new_tokens,
+        "extra_tokens": args.loop_extra_tokens,
+    }
+
+
 @torch.inference_mode()
-def generate(model: Any, tokenizer: Any, steerer: Steerer, task: dict[str, Any], capture_key: str) -> dict[str, Any]:
+def generate(
+    model: Any,
+    tokenizer: Any,
+    steerer: Steerer,
+    task: dict[str, Any],
+    capture_key: str,
+    options: dict[str, Any] | None,
+) -> dict[str, Any]:
     rendered = tokenizer.apply_chat_template(
         [{"role": "user", "content": task["prompt"]}],
         tokenize=False,
@@ -249,12 +294,14 @@ def generate(model: Any, tokenizer: Any, steerer: Steerer, task: dict[str, Any],
         enable_thinking=True,
     )
     inputs = tokenizer([rendered], return_tensors="pt").to(model.device)
+    detector = UniqueNGramLoopDetector(inputs.input_ids.shape[1], **options) if options is not None else None
     started = time.perf_counter()
     with steerer.apply(task["pair"], task["layer"], task["alpha"]):
         output = model.generate(
             **inputs,
             max_length=model.config.max_position_embeddings,
             do_sample=False,
+            **({"stopping_criteria": StoppingCriteriaList([detector])} if detector is not None else {}),
         )
     generation_seconds = time.perf_counter() - started
     continuation = output[0, inputs.input_ids.shape[1] :]
@@ -265,6 +312,7 @@ def generate(model: Any, tokenizer: Any, steerer: Steerer, task: dict[str, Any],
     ended_with_eos = bool(token_ids) and token_ids[-1] in eos_ids(tokenizer)
     hit_context_limit = output.shape[1] >= model.config.max_position_embeddings and not ended_with_eos
     correct = score(task["benchmark"], text, task["answer"]) if reasoning_status == "closed_thinking" else False
+    loop_detection = detector.metadata(len(token_ids)) if detector is not None else {"enabled": False, "detected": False, "forced_stop": False}
     return {
         "key": task_key(task),
         "benchmark": task["benchmark"],
@@ -287,6 +335,9 @@ def generate(model: Any, tokenizer: Any, steerer: Steerer, task: dict[str, Any],
         "reasoning_token_count": reasoning_tokens,
         "reasoning_status": reasoning_status,
         "hit_context_limit": hit_context_limit,
+        "loop_detected": loop_detection["detected"],
+        "loop_forced_stop": loop_detection["forced_stop"],
+        "loop_detection": loop_detection,
         "generation_seconds": generation_seconds,
     }
 
@@ -317,15 +368,17 @@ def run_worker(args: argparse.Namespace) -> None:
         model.device,
     ) if nonzero else {}
     steerer = Steerer(model, deltas)
+    options = loop_options(args)
     RESULTS.mkdir(exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         for index, task in enumerate(pending, 1):
-            record = generate(model, tokenizer, steerer, task, capture_key)
+            record = generate(model, tokenizer, steerer, task, capture_key, options)
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
             handle.flush()
             print(
                 f"{index}/{len(pending)} {record['key']} tokens={record['reasoning_token_count']} "
-                f"correct={record['correct']} seconds={record['generation_seconds']:.1f}",
+                f"correct={record['correct']} loop={record['loop_detected']} "
+                f"seconds={record['generation_seconds']:.1f}",
                 flush=True,
             )
 
@@ -350,7 +403,23 @@ def worker_command(args: argparse.Namespace, worker: int) -> list[str]:
         str(args.baseline_repeats),
         "--vector-dir",
         str(args.vector_dir),
+        "--loop-ngram-size",
+        str(args.loop_ngram_size),
+        "--loop-window-tokens",
+        str(args.loop_window_tokens),
+        "--loop-unique-ratio-threshold",
+        str(args.loop_unique_ratio_threshold),
+        "--loop-check-every",
+        str(args.loop_check_every),
+        "--loop-consecutive-windows",
+        str(args.loop_consecutive_windows),
+        "--loop-min-new-tokens",
+        str(args.loop_min_new_tokens),
+        "--loop-extra-tokens",
+        str(args.loop_extra_tokens),
     ]
+    if args.disable_loop_detection:
+        command.append("--disable-loop-detection")
     if args.limit is not None:
         command.extend(["--limit", str(args.limit)])
     return command
