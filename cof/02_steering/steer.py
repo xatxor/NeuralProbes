@@ -87,6 +87,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--baseline-repeats", type=int, default=DEFAULT_BASELINE_REPEATS)
     parser.add_argument("--vector-dir", type=Path, required=True, help="Directory with manifest.json, diff.safetensors, pairs.parquet")
     parser.add_argument(
+        "--max-new-tokens",
+        type=int,
+        default=16384,
+        help="Generation budget per response. Strong steering often never terminates, and an "
+        "unbounded run costs a full context window per generation.",
+    )
+    parser.add_argument(
         "--disable-loop-detection",
         action="store_true",
         help="Disable online low-diversity loop detection.",
@@ -123,6 +130,8 @@ def parse_args() -> argparse.Namespace:
         parser.error(f"--alphas must be selected from {list(ALPHAS)}")
     if not args.vector_dir.is_dir():
         parser.error(f"--vector-dir {args.vector_dir} is not a directory")
+    if args.max_new_tokens < 1:
+        parser.error("--max-new-tokens must be at least 1")
     return args
 
 
@@ -185,15 +194,23 @@ def prompt_hash(task: dict[str, Any]) -> str:
     return hashlib.sha256(task["prompt"].encode()).hexdigest()
 
 
-def compatible(record: dict[str, Any], task: dict[str, Any], capture_key: str) -> bool:
-    return (
+def compatible(record: dict[str, Any], task: dict[str, Any], capture_key: str, max_new_tokens: int) -> bool:
+    if not (
         record.get("key") == task_key(task)
         and record.get("model") == MODEL_ID
         and record.get("dtype") == "float16"
         and record.get("steering_version") == STEERING_VERSION
         and record.get("vector_capture_key") == capture_key
         and record.get("prompt_sha256") == prompt_hash(task)
-    )
+    ):
+        return False
+    if record.get("max_new_tokens") == max_new_tokens:
+        return True
+    # A generation that stopped on its own well inside the new budget is the same generation
+    # this budget would produce, so a budget change does not invalidate it.
+    generated = record.get("generated_token_count")
+    stopped_on_its_own = not record.get("hit_context_limit") and not record.get("hit_token_budget", False)
+    return stopped_on_its_own and isinstance(generated, int) and generated < max_new_tokens
 
 
 def iter_records(path: Path):
@@ -286,6 +303,7 @@ def generate(
     task: dict[str, Any],
     capture_key: str,
     options: dict[str, Any] | None,
+    max_new_tokens: int,
 ) -> dict[str, Any]:
     rendered = tokenizer.apply_chat_template(
         [{"role": "user", "content": task["prompt"]}],
@@ -299,6 +317,7 @@ def generate(
     with steerer.apply(task["pair"], task["layer"], task["alpha"]):
         output = model.generate(
             **inputs,
+            max_new_tokens=max_new_tokens,
             max_length=model.config.max_position_embeddings,
             do_sample=False,
             **({"stopping_criteria": StoppingCriteriaList([detector])} if detector is not None else {}),
@@ -311,6 +330,7 @@ def generate(
     text = tokenizer.decode(continuation, skip_special_tokens=False)
     ended_with_eos = bool(token_ids) and token_ids[-1] in eos_ids(tokenizer)
     hit_context_limit = output.shape[1] >= model.config.max_position_embeddings and not ended_with_eos
+    hit_token_budget = len(token_ids) >= max_new_tokens and not ended_with_eos
     correct = score(task["benchmark"], text, task["answer"]) if reasoning_status == "closed_thinking" else False
     loop_detection = detector.metadata(len(token_ids)) if detector is not None else {"enabled": False, "detected": False, "forced_stop": False}
     return {
@@ -335,6 +355,8 @@ def generate(
         "reasoning_token_count": reasoning_tokens,
         "reasoning_status": reasoning_status,
         "hit_context_limit": hit_context_limit,
+        "hit_token_budget": hit_token_budget,
+        "max_new_tokens": max_new_tokens,
         "loop_detected": loop_detection["detected"],
         "loop_forced_stop": loop_detection["forced_stop"],
         "loop_detection": loop_detection,
@@ -352,7 +374,7 @@ def run_worker(args: argparse.Namespace) -> None:
     completed = {
         record["key"]
         for record in iter_records(path)
-        if record.get("key") in tasks_by_key and compatible(record, tasks_by_key[record["key"]], capture_key)
+        if record.get("key") in tasks_by_key and compatible(record, tasks_by_key[record["key"]], capture_key, args.max_new_tokens)
     }
     pending = [task for task in tasks if task_key(task) not in completed]
     if not pending:
@@ -372,7 +394,7 @@ def run_worker(args: argparse.Namespace) -> None:
     RESULTS.mkdir(exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         for index, task in enumerate(pending, 1):
-            record = generate(model, tokenizer, steerer, task, capture_key, options)
+            record = generate(model, tokenizer, steerer, task, capture_key, options, args.max_new_tokens)
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
             handle.flush()
             print(
@@ -403,6 +425,8 @@ def worker_command(args: argparse.Namespace, worker: int) -> list[str]:
         str(args.baseline_repeats),
         "--vector-dir",
         str(args.vector_dir),
+        "--max-new-tokens",
+        str(args.max_new_tokens),
         "--loop-ngram-size",
         str(args.loop_ngram_size),
         "--loop-window-tokens",
@@ -449,7 +473,7 @@ def seed_shards(args: argparse.Namespace, tasks: list[dict[str, Any]], capture_k
             for line in source:
                 record = json.loads(line)
                 target = assigned.get(record.get("key"))
-                if target and compatible(record, target[1], capture_key):
+                if target and compatible(record, target[1], capture_key, args.max_new_tokens):
                     destinations[target[0]].write(line)
     finally:
         for handle in destinations.values():
@@ -474,7 +498,7 @@ def merge_shards(args: argparse.Namespace, tasks: list[dict[str, Any]], capture_
                 for line in source:
                     record = json.loads(line)
                     key = record.get("key")
-                    if key in tasks_by_key and key not in seen and compatible(record, tasks_by_key[key], capture_key):
+                    if key in tasks_by_key and key not in seen and compatible(record, tasks_by_key[key], capture_key, args.max_new_tokens):
                         output.write(line)
                         seen.add(key)
     missing = [key for key in tasks_by_key if key not in seen]

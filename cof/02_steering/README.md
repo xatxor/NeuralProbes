@@ -36,10 +36,22 @@ uv run python 02_steering/summarize.py
 uv run python 02_steering/test_steering.py
 ```
 
+Generation is bounded by `--max-new-tokens` (default 16,384). Strong steering
+often never terminates: at alpha 5 a single unbounded generation can fill the
+whole 41k context and cost roughly two hours, against about three minutes for
+an unsteered baseline. Records carry `hit_token_budget` so a truncated run is
+distinguishable from a wrong answer.
+
+An online loop detector (`UniqueNGramLoopDetector`, shared with the eval
+harness) stops sustained low-diversity repetition and records `loop_detected`.
+Disable it with `--disable-loop-detection`.
+
 Results are appended under `02_steering/results/`. Re-running the same command
 resumes completed condition/question pairs; a change of `--vector-dir` (or any
 vector recapture, tracked via the manifest's `capture_merge_key`) invalidates
-old records automatically rather than silently reusing them.
+old records automatically rather than silently reusing them. Lowering
+`--max-new-tokens` only invalidates records that would have been truncated by
+the new budget; generations that stopped on their own inside it are reused.
 
 Summaries use the three alpha-zero generations per question as the baseline;
 override them with `--baseline-repeats`. Pair `532` (`joy`, versus `sadness`)

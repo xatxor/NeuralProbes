@@ -49,12 +49,28 @@ def main() -> None:
         vector_dir=Path("/fake/vector/dir"), disable_loop_detection=False, loop_ngram_size=4,
         loop_window_tokens=1024, loop_unique_ratio_threshold=0.2, loop_check_every=64,
         loop_consecutive_windows=3, loop_min_new_tokens=2048, loop_extra_tokens=512,
+        max_new_tokens=16384,
     )
     command = worker_command(args, 0)
     assert "--alphas=-5.0,-4.5,-4.0,-3.5,-3.0,-2.5,-2.0,-1.5,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0" in command
     assert "--loop-window-tokens" in command and "--disable-loop-detection" not in command
+    assert "--max-new-tokens" in command
     assert steer.loop_options(args)["unique_ratio_threshold"] == 0.2
     assert steer.loop_options(SimpleNamespace(**{**vars(args), "disable_loop_detection": True})) is None
+
+    base = {
+        "key": "aime_2024:0:baseline", "model": steer.MODEL_ID, "dtype": "float16",
+        "steering_version": steer.STEERING_VERSION, "vector_capture_key": "key-a",
+        "prompt_sha256": steer.prompt_hash({"prompt": "p"}),
+    }
+    baseline_task = {"benchmark": "aime_2024", "id": "0", "pair": None, "layer": None, "alpha": 0.0, "prompt": "p"}
+    # A run that stopped on its own inside the new budget survives a budget change.
+    kept = {**base, "generated_token_count": 4000, "hit_context_limit": False, "hit_token_budget": False}
+    assert steer.compatible(kept, baseline_task, "key-a", 16384)
+    # One that ran to the context wall has to be regenerated under the budget.
+    truncated = {**base, "generated_token_count": 40823, "hit_context_limit": True, "hit_token_budget": False}
+    assert not steer.compatible(truncated, baseline_task, "key-a", 16384)
+    assert not steer.compatible(kept, baseline_task, "other-key", 16384)
 
     rows = pd.DataFrame(
         [
