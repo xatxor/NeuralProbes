@@ -24,12 +24,19 @@ def main() -> None:
     assert sum(row["alpha"] == 0 for row in conditions) == 1
     # Baselines lead, so a run cut short still has the reference every delta needs.
     assert conditions[0]["alpha"] == 0.0 and conditions[1]["alpha"] != 0.0
-    # Every concept is covered at the first strength before the second one starts.
+    # Default order finishes one concept's whole alpha curve before the next concept.
     steered_conditions = [row for row in conditions if row["alpha"] != 0.0]
-    first_alpha = steered_conditions[0]["alpha"]
-    leading = [row for row in steered_conditions if row["alpha"] == first_alpha]
+    leading = [row for row in steered_conditions if row["pair"] == steered_conditions[0]["pair"]]
     assert steered_conditions[: len(leading)] == leading
-    assert {row["pair"] for row in leading} == set(DEFAULT_CONCEPT_PAIRS)
+    assert {row["alpha"] for row in leading} == set(ALPHAS)
+
+    # The other order covers every concept at one strength first.
+    by_alpha = condition_specs(list(DEFAULT_CONCEPT_PAIRS), list(DEFAULT_LAYERS), list(ALPHAS), 1, "alpha")
+    steered_by_alpha = [row for row in by_alpha if row["alpha"] != 0.0]
+    first = [row for row in steered_by_alpha if row["alpha"] == steered_by_alpha[0]["alpha"]]
+    assert steered_by_alpha[: len(first)] == first
+    assert {row["pair"] for row in first} == set(DEFAULT_CONCEPT_PAIRS)
+    assert sorted(map(repr, by_alpha)) == sorted(map(repr, conditions))
     assert all(
         row["alpha"] == 0 or (row["pair"] is not None and row["layer"] is not None)
         for row in conditions
@@ -57,9 +64,10 @@ def main() -> None:
         vector_dir=Path("/fake/vector/dir"), disable_loop_detection=False, loop_ngram_size=4,
         loop_window_tokens=1024, loop_unique_ratio_threshold=0.2, loop_check_every=64,
         loop_consecutive_windows=3, loop_min_new_tokens=2048, loop_extra_tokens=512,
-        max_new_tokens=16384,
+        max_new_tokens=16384, order="concept",
     )
     command = worker_command(args, 0)
+    assert "--order" in command and "concept" in command
     assert "--alphas=-3.5,-3.0,-2.5,-2.0,-1.5,-1.0,-0.5,0.5,1.0,1.5,2.0,2.5,3.0,3.5" in command
     assert "--loop-window-tokens" in command and "--disable-loop-detection" not in command
     assert "--max-new-tokens" in command

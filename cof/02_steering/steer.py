@@ -65,6 +65,9 @@ DEFAULT_LAYERS = (18,)
 # Greedy decoding is near-deterministic: in the pilot four of five questions produced
 # byte-identical baselines across three repeats, so one is enough.
 DEFAULT_BASELINE_REPEATS = 1
+# "concept" finishes one concept's whole alpha curve before starting the next;
+# "alpha" covers every concept at one strength first.
+DEFAULT_ORDER = "concept"
 VALID_LAYERS = tuple(range(37))
 # Alpha 3.5 and above is a non-termination regime rather than a stronger effect: in the
 # pilot seven of ten generations at alpha 5 never closed their thinking block.
@@ -91,6 +94,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--layers", default=",".join(map(str, DEFAULT_LAYERS)))
     parser.add_argument("--alphas", default=",".join(map(str, ALPHAS)))
     parser.add_argument("--baseline-repeats", type=int, default=DEFAULT_BASELINE_REPEATS)
+    parser.add_argument(
+        "--order",
+        choices=("concept", "alpha"),
+        default=DEFAULT_ORDER,
+        help="Which axis an interrupted run completes first: whole alpha curves per concept "
+        "(concept), or every concept at one strength (alpha).",
+    )
     parser.add_argument("--vector-dir", type=Path, required=True, help="Directory with manifest.json, diff.safetensors, pairs.parquet")
     parser.add_argument(
         "--max-new-tokens",
@@ -145,23 +155,34 @@ def benchmark_names(name: str) -> tuple[str, ...]:
     return ("aime_2024", "math_500", "gpqa_diamond") if name == "all" else (name,)
 
 
-def condition_specs(concepts: list[int], layers: list[int], alphas: list[float], baseline_repeats: int = DEFAULT_BASELINE_REPEATS) -> list[dict[str, Any]]:
-    """Baselines first, then every concept at one strength before moving to the next.
+def condition_specs(
+    concepts: list[int],
+    layers: list[int],
+    alphas: list[float],
+    baseline_repeats: int = DEFAULT_BASELINE_REPEATS,
+    order: str = DEFAULT_ORDER,
+) -> list[dict[str, Any]]:
+    """Baselines first, then steered conditions in the order an interrupted run can use.
 
-    Alpha varies slowest so that an interrupted run yields a complete concept-by-concept
-    comparison at the strengths it reached, which is the cross-concept figure, rather than
-    one concept's full dose-response and nothing about the rest. Pass --alphas in priority
-    order to choose which strengths are covered first.
+    With `order="concept"` alpha varies fastest, so each concept gets its complete
+    dose-response curve before the next one starts. With `order="alpha"` concepts vary
+    fastest, so every concept is covered at one strength before the next strength, which
+    is what a cross-concept comparison at fixed alpha needs. Both respect the order the
+    lists are given in, so --concept-pairs and --alphas set the priority.
     """
     conditions = []
     conditions.extend(
         {"pair": None, "concept": None, "layer": None, "alpha": 0.0, "baseline_repeat": repeat}
         for repeat in range(baseline_repeats)
     )
+    pairs = (
+        [(pair, alpha) for pair in concepts for alpha in alphas]
+        if order == "concept"
+        else [(pair, alpha) for alpha in alphas for pair in concepts]
+    )
     conditions.extend(
         {"pair": pair, "concept": CONCEPTS[pair], "layer": layer, "alpha": alpha}
-        for alpha in alphas
-        for pair in concepts
+        for pair, alpha in pairs
         for layer in layers
         if alpha != 0.0
     )
@@ -175,7 +196,7 @@ def build_tasks(args: argparse.Namespace) -> list[dict[str, Any]]:
     which is what the accuracy deltas need, rather than every condition for a handful of
     questions. Baselines come first because every delta is measured against them.
     """
-    conditions = condition_specs(args.concept_pairs, args.layers, args.alphas, args.baseline_repeats)
+    conditions = condition_specs(args.concept_pairs, args.layers, args.alphas, args.baseline_repeats, args.order)
     tasks = []
     for benchmark in benchmark_names(args.benchmark):
         examples = load_benchmark(benchmark)
@@ -443,6 +464,8 @@ def worker_command(args: argparse.Namespace, worker: int) -> list[str]:
         f"--alphas={','.join(map(str, args.alphas))}",
         "--baseline-repeats",
         str(args.baseline_repeats),
+        "--order",
+        args.order,
         "--vector-dir",
         str(args.vector_dir),
         "--max-new-tokens",
