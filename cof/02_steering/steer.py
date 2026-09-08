@@ -58,11 +58,17 @@ CONCEPTS = {
     951: "training-time honesty about objectives",
     964: "treating benchmarks as ordinary tasks",
 }
-DEFAULT_CONCEPT_PAIRS = tuple(CONCEPTS)
-DEFAULT_LAYERS = (11, 14, 18, 22, 25)
-DEFAULT_BASELINE_REPEATS = 3
+# The 16 CoT concepts plus the joy control. The random sanity-check pairs stay selectable
+# through --concept-pairs but are out of the default grid.
+DEFAULT_CONCEPT_PAIRS = (367, 960, 357, 909, 963, 598, 908, 253, 533, 1013, 657, 902, 703, 146, 878, 459, 532)
+DEFAULT_LAYERS = (18,)
+# Greedy decoding is near-deterministic: in the pilot four of five questions produced
+# byte-identical baselines across three repeats, so one is enough.
+DEFAULT_BASELINE_REPEATS = 1
 VALID_LAYERS = tuple(range(37))
-ALPHAS = (-5.0, -4.5, -4.0, -3.5, -3.0, -2.5, -2.0, -1.5, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0)
+# Alpha 3.5 and above is a non-termination regime rather than a stronger effect: in the
+# pilot seven of ten generations at alpha 5 never closed their thinking block.
+ALPHAS = (-3.5, -3.0, -2.5, -2.0, -1.5, -1.0, -0.5, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5)
 
 
 def comma_values(text: str, cast: Any) -> list[Any]:
@@ -140,6 +146,13 @@ def benchmark_names(name: str) -> tuple[str, ...]:
 
 
 def condition_specs(concepts: list[int], layers: list[int], alphas: list[float], baseline_repeats: int = DEFAULT_BASELINE_REPEATS) -> list[dict[str, Any]]:
+    """Baselines first, then every concept at one strength before moving to the next.
+
+    Alpha varies slowest so that an interrupted run yields a complete concept-by-concept
+    comparison at the strengths it reached, which is the cross-concept figure, rather than
+    one concept's full dose-response and nothing about the rest. Pass --alphas in priority
+    order to choose which strengths are covered first.
+    """
     conditions = []
     conditions.extend(
         {"pair": None, "concept": None, "layer": None, "alpha": 0.0, "baseline_repeat": repeat}
@@ -147,24 +160,31 @@ def condition_specs(concepts: list[int], layers: list[int], alphas: list[float],
     )
     conditions.extend(
         {"pair": pair, "concept": CONCEPTS[pair], "layer": layer, "alpha": alpha}
+        for alpha in alphas
         for pair in concepts
         for layer in layers
-        for alpha in alphas
         if alpha != 0.0
     )
     return conditions
 
 
 def build_tasks(args: argparse.Namespace) -> list[dict[str, Any]]:
+    """Tasks ordered condition-major: every question of one condition before the next.
+
+    A run that is cut short then holds complete questions for the conditions it reached,
+    which is what the accuracy deltas need, rather than every condition for a handful of
+    questions. Baselines come first because every delta is measured against them.
+    """
     conditions = condition_specs(args.concept_pairs, args.layers, args.alphas, args.baseline_repeats)
     tasks = []
     for benchmark in benchmark_names(args.benchmark):
         examples = load_benchmark(benchmark)
         if args.limit is not None:
             examples = examples[: args.limit]
-        for example in examples:
-            prompt = instruction(benchmark, example["prompt"])
-            for condition in conditions:
+        prompts = {example["id"]: instruction(benchmark, example["prompt"]) for example in examples}
+        for condition in conditions:
+            for example in examples:
+                prompt = prompts[example["id"]]
                 tasks.append(
                     {
                         "benchmark": benchmark,
