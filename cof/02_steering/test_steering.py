@@ -19,8 +19,8 @@ from summarize import plot_results, summarize
 
 def main() -> None:
     conditions = condition_specs(list(DEFAULT_CONCEPT_PAIRS), list(DEFAULT_LAYERS), list(ALPHAS))
-    assert len(conditions) == 239
-    assert {len((conditions * 30)[worker::10]) for worker in range(10)} == {717}
+    assert len(conditions) == 171
+    assert {len((conditions * 30)[worker::10]) for worker in range(10)} == {513}
     assert sum(row["alpha"] == 0 for row in conditions) == 1
     # Baselines lead, so a run cut short still has the reference every delta needs.
     assert conditions[0]["alpha"] == 0.0 and conditions[1]["alpha"] != 0.0
@@ -68,7 +68,7 @@ def main() -> None:
     )
     command = worker_command(args, 0)
     assert "--order" in command and "concept" in command
-    assert "--alphas=-3.5,-3.0,-2.5,-2.0,-1.5,-1.0,-0.5,0.5,1.0,1.5,2.0,2.5,3.0,3.5" in command
+    assert "--alphas=-3.0,-2.5,-2.0,-1.5,-1.0,1.0,1.5,2.0,2.5,3.0" in command
     assert "--loop-window-tokens" in command and "--disable-loop-detection" not in command
     assert "--max-new-tokens" in command
     assert steer.loop_options(args)["unique_ratio_threshold"] == 0.2

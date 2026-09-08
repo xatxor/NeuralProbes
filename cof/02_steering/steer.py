@@ -71,7 +71,7 @@ DEFAULT_ORDER = "concept"
 VALID_LAYERS = tuple(range(37))
 # Alpha 3.5 and above is a non-termination regime rather than a stronger effect: in the
 # pilot seven of ten generations at alpha 5 never closed their thinking block.
-ALPHAS = (-3.5, -3.0, -2.5, -2.0, -1.5, -1.0, -0.5, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5)
+ALPHAS = (-3.0, -2.5, -2.0, -1.5, -1.0, 1.0, 1.5, 2.0, 2.5, 3.0)
 
 
 def comma_values(text: str, cast: Any) -> list[Any]:
