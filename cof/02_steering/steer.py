@@ -496,9 +496,13 @@ def run_worker(args: argparse.Namespace) -> None:
         tasks = tasks[args.worker_index :: args.num_workers]
     path = result_path(args)
     tasks_by_key = {task_key(task): task for task in tasks}
+    # Every shard is consulted, not just this worker's own. Under a job array the slicing
+    # moves tasks between workers whenever the grid changes, and work already done by a
+    # sibling would otherwise be repeated.
     completed = {
         record["key"]
-        for record in iter_records(path)
+        for shard in sorted(RESULTS.glob("steering*.jsonl"))
+        for record in iter_records(shard)
         if record.get("key") in tasks_by_key and compatible(record, tasks_by_key[record["key"]], capture_key, args.max_new_tokens)
     }
     pending = [task for task in tasks if task_key(task) not in completed]
