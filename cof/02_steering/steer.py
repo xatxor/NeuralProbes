@@ -105,6 +105,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--vector-dir", type=Path, required=True, help="Directory with manifest.json, diff.safetensors, pairs.parquet")
     parser.add_argument(
+        "--results-dir",
+        type=Path,
+        default=RESULTS,
+        help="Where shards are written and resumed from. Point a throwaway run somewhere "
+        "else to keep it out of the main results.",
+    )
+    parser.add_argument(
         "--batch-size",
         type=int,
         default=8,
@@ -275,9 +282,10 @@ def iter_records(path: Path):
 
 
 def result_path(args: argparse.Namespace) -> Path:
+    results = getattr(args, "results_dir", None) or RESULTS
     if args.worker_index is None:
-        return RESULTS / "steering.jsonl"
-    return RESULTS / f"steering.worker-{args.worker_index:02d}-of-{args.num_workers:02d}.jsonl"
+        return results / "steering.jsonl"
+    return results / f"steering.worker-{args.worker_index:02d}-of-{args.num_workers:02d}.jsonl"
 
 
 def vector_manifest(vector_dir: Path) -> dict[str, Any]:
@@ -501,7 +509,7 @@ def run_worker(args: argparse.Namespace) -> None:
     # sibling would otherwise be repeated.
     completed = {
         record["key"]
-        for shard in sorted(RESULTS.glob("steering*.jsonl"))
+        for shard in sorted(args.results_dir.glob("steering*.jsonl"))
         for record in iter_records(shard)
         if record.get("key") in tasks_by_key and compatible(record, tasks_by_key[record["key"]], capture_key, args.max_new_tokens)
     }
@@ -525,7 +533,7 @@ def run_worker(args: argparse.Namespace) -> None:
     ) if nonzero else {}
     steerer = Steerer(model, deltas)
     options = loop_options(args)
-    RESULTS.mkdir(exist_ok=True)
+    args.results_dir.mkdir(parents=True, exist_ok=True)
     batches = condition_batches(pending, args.batch_size)
     done = 0
     with path.open("a", encoding="utf-8") as handle:
@@ -569,6 +577,8 @@ def worker_command(args: argparse.Namespace, worker: int) -> list[str]:
         str(args.batch_size),
         "--vector-dir",
         str(args.vector_dir),
+        "--results-dir",
+        str(args.results_dir),
         "--max-new-tokens",
         str(args.max_new_tokens),
         "--loop-ngram-size",
@@ -594,7 +604,7 @@ def worker_command(args: argparse.Namespace, worker: int) -> list[str]:
 
 
 def seed_shards(args: argparse.Namespace, tasks: list[dict[str, Any]], capture_key: str) -> None:
-    canonical = RESULTS / "steering.jsonl"
+    canonical = args.results_dir / "steering.jsonl"
     if not canonical.exists():
         return
     missing_workers = []
@@ -627,7 +637,7 @@ def seed_shards(args: argparse.Namespace, tasks: list[dict[str, Any]], capture_k
 def merge_shards(args: argparse.Namespace, tasks: list[dict[str, Any]], capture_key: str) -> None:
     tasks_by_key = {task_key(task): task for task in tasks}
     seen = set()
-    destination = RESULTS / "steering.jsonl"
+    destination = args.results_dir / "steering.jsonl"
     temporary = destination.with_suffix(".jsonl.tmp")
     with temporary.open("w", encoding="utf-8") as output:
         if destination.exists():
@@ -658,7 +668,7 @@ def launch_workers(args: argparse.Namespace) -> None:
     if len(gpu_ids) < args.num_workers:
         raise RuntimeError(f"Requested {args.num_workers} workers, but only {len(gpu_ids)} GPUs are visible")
     tasks = build_tasks(args)
-    RESULTS.mkdir(exist_ok=True)
+    args.results_dir.mkdir(parents=True, exist_ok=True)
     seed_shards(args, tasks, capture_key)
     processes = []
     for worker in range(args.num_workers):

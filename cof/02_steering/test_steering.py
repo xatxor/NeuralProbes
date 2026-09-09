@@ -65,10 +65,12 @@ def main() -> None:
         loop_window_tokens=1024, loop_unique_ratio_threshold=0.2, loop_check_every=64,
         loop_consecutive_windows=3, loop_min_new_tokens=2048, loop_extra_tokens=512,
         max_new_tokens=16384, order="concept", batch_size=8,
+        results_dir=Path("/fake/results"),
     )
     command = worker_command(args, 0)
     assert "--order" in command and "concept" in command
     assert "--batch-size" in command
+    assert "--results-dir" in command
     assert "--alphas=-3.0,-2.5,-2.0,-1.5,-1.0,1.0,1.5,2.0,2.5,3.0" in command
     assert "--loop-window-tokens" in command and "--disable-loop-detection" not in command
     assert "--max-new-tokens" in command
@@ -152,7 +154,9 @@ def main() -> None:
         steer.RESULTS = root
         (root / "steering.jsonl").write_text('{"key": "previous"}\n')
         (root / "steering.worker-00-of-01.jsonl").write_text("")
-        steer.merge_shards(SimpleNamespace(num_workers=1, worker_index=None), [], "test-capture-key")
+        steer.merge_shards(
+            SimpleNamespace(num_workers=1, worker_index=None, results_dir=root), [], "test-capture-key"
+        )
         assert (root / "steering.jsonl").read_text() == '{"key": "previous"}\n'
         steer.RESULTS = old_results
     print("steering checks passed")
