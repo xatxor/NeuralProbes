@@ -64,10 +64,11 @@ def main() -> None:
         vector_dir=Path("/fake/vector/dir"), disable_loop_detection=False, loop_ngram_size=4,
         loop_window_tokens=1024, loop_unique_ratio_threshold=0.2, loop_check_every=64,
         loop_consecutive_windows=3, loop_min_new_tokens=2048, loop_extra_tokens=512,
-        max_new_tokens=16384, order="concept",
+        max_new_tokens=16384, order="concept", batch_size=8,
     )
     command = worker_command(args, 0)
     assert "--order" in command and "concept" in command
+    assert "--batch-size" in command
     assert "--alphas=-3.0,-2.5,-2.0,-1.5,-1.0,1.0,1.5,2.0,2.5,3.0" in command
     assert "--loop-window-tokens" in command and "--disable-loop-detection" not in command
     assert "--max-new-tokens" in command
@@ -87,6 +88,48 @@ def main() -> None:
     truncated = {**base, "generated_token_count": 40823, "hit_context_limit": True, "hit_token_budget": False}
     assert not steer.compatible(truncated, baseline_task, "key-a", 16384)
     assert not steer.compatible(kept, baseline_task, "other-key", 16384)
+
+    # Batches never mix steering conditions, and every task lands in exactly one.
+    mixed = [
+        {"pair": 657, "layer": 18, "alpha": 1.0, "id": str(i)} for i in range(10)
+    ] + [
+        {"pair": 657, "layer": 18, "alpha": -1.0, "id": str(i)} for i in range(3)
+    ] + [
+        {"pair": None, "layer": None, "alpha": 0.0, "id": str(i)} for i in range(2)
+    ]
+    batches = steer.condition_batches(mixed, 4)
+    assert [len(batch) for batch in batches] == [4, 4, 2, 3, 2]
+    for batch in batches:
+        cells = {(task["pair"], task["layer"], task["alpha"]) for task in batch}
+        assert len(cells) == 1
+    assert sum(len(batch) for batch in batches) == len(mixed)
+
+    # A row is cut at its own EOS, so padding from longer rows never leaks into it.
+    assert steer.split_continuation([5, 6, 99, 0, 0], {99}) == [5, 6, 99]
+    assert steer.split_continuation([5, 6, 7], {99}) == [5, 6, 7]
+
+    # Loop detection is per row: a repeating row must not condemn its neighbours, and a
+    # row that already emitted EOS must not trip on the padding that follows it.
+    options = {
+        "ngram_size": 2, "window_tokens": 32, "unique_ratio_threshold": 0.3,
+        "check_every": 8, "consecutive_windows": 2, "min_new_tokens": 32, "extra_tokens": 0,
+    }
+    prompt = [1, 2, 3, 4]
+    detector = steer.BatchedLoopDetector(prompt_tokens=len(prompt), batch_size=3, eos={99}, options=options)
+    stopped = torch.zeros(3, dtype=torch.bool)
+    for length in range(1, 140):
+        rows = [
+            ([7, 8] * length)[:length],  # two tokens forever: no diversity
+            list(range(100, 100 + length)),  # never repeats
+            ([5, 99] + [0] * length)[:length],  # emits EOS, then gets padded
+        ]
+        input_ids = torch.tensor([prompt + row for row in rows])
+        stopped |= detector(input_ids, None).cpu()
+    assert stopped.tolist() == [True, False, False]
+    assert detector.metadata(0, 140)["detected"]
+    assert not detector.metadata(1, 140)["detected"]
+    # The padded row was retired at its EOS rather than being read as a loop.
+    assert detector.finished[2] and not detector.metadata(2, 140)["detected"]
 
     rows = pd.DataFrame(
         [

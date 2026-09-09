@@ -16,7 +16,7 @@ from typing import Any
 import pandas as pd
 import torch
 from safetensors.torch import load_file
-from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteriaList
+from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteria, StoppingCriteriaList
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent.parent / "vika" / "01_eval"))
@@ -32,7 +32,9 @@ from evaluate import (  # noqa: E402
 )
 
 RESULTS = ROOT / "results"
-STEERING_VERSION = 2
+# 3: batched generation. Padding and reduction order shift the arithmetic slightly, so
+# batched runs are not byte-comparable with the single-sequence records before it.
+STEERING_VERSION = 3
 CONCEPTS = {
     367: "faithful chain-of-thought",
     960: "transparent chain-of-thought",
@@ -103,6 +105,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--vector-dir", type=Path, required=True, help="Directory with manifest.json, diff.safetensors, pairs.parquet")
     parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=8,
+        help="Questions generated together within one steering condition. Decoding is "
+        "memory-bandwidth bound, so a batch costs little more per step than a single "
+        "sequence. Raise until the KV cache stops fitting.",
+    )
+    parser.add_argument(
         "--max-new-tokens",
         type=int,
         default=16384,
@@ -148,6 +158,8 @@ def parse_args() -> argparse.Namespace:
         parser.error(f"--vector-dir {args.vector_dir} is not a directory")
     if args.max_new_tokens < 1:
         parser.error("--max-new-tokens must be at least 1")
+    if args.batch_size < 1:
+        parser.error("--batch-size must be at least 1")
     return args
 
 
@@ -322,6 +334,37 @@ def eos_ids(tokenizer: Any) -> set[int]:
     return set(value if isinstance(value, list) else [value])
 
 
+class BatchedLoopDetector(StoppingCriteria):
+    """Runs the eval harness detector once per row, so one looping sequence stops alone.
+
+    A row that has already emitted EOS is left alone: the tail HuggingFace pads it with
+    would read as perfectly repetitive and trip the detector on a finished generation.
+    """
+
+    def __init__(self, prompt_tokens: int, batch_size: int, eos: set[int], options: dict[str, Any]) -> None:
+        self.detectors = [UniqueNGramLoopDetector(prompt_tokens, **options) for _ in range(batch_size)]
+        self.eos = eos
+        self.finished = [False] * batch_size
+        # Tokens already inspected for EOS; scanning only what is new keeps this O(1) a step.
+        self.scanned = prompt_tokens
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs: Any) -> torch.BoolTensor:
+        width = input_ids.shape[1]
+        done = torch.zeros(input_ids.shape[0], dtype=torch.bool, device=input_ids.device)
+        for row, detector in enumerate(self.detectors):
+            if not self.finished[row] and width > self.scanned:
+                fresh = input_ids[row, self.scanned : width].tolist()
+                self.finished[row] = any(token in self.eos for token in fresh)
+            if self.finished[row]:
+                continue
+            done[row] = bool(detector(input_ids[row : row + 1], scores).any())
+        self.scanned = max(self.scanned, width)
+        return done
+
+    def metadata(self, row: int, generated_tokens: int) -> dict[str, Any]:
+        return self.detectors[row].metadata(generated_tokens)
+
+
 def loop_options(args: argparse.Namespace) -> dict[str, Any] | None:
     if args.disable_loop_detection:
         return None
@@ -336,26 +379,55 @@ def loop_options(args: argparse.Namespace) -> dict[str, Any] | None:
     }
 
 
+def condition_batches(tasks: list[dict[str, Any]], batch_size: int) -> list[list[dict[str, Any]]]:
+    """Group tasks into batches that share one steering condition.
+
+    The injected vector is a property of the condition, not of the question, so every row
+    of a batch has to come from the same (pair, layer, alpha) cell. Condition order is
+    preserved, so an interrupted run still finishes conditions in the requested order.
+    """
+    groups: dict[tuple[Any, Any, float], list[dict[str, Any]]] = {}
+    for task in tasks:
+        groups.setdefault((task["pair"], task["layer"], task["alpha"]), []).append(task)
+    batches = []
+    for group in groups.values():
+        batches.extend(group[start : start + batch_size] for start in range(0, len(group), batch_size))
+    return batches
+
+
+def split_continuation(row: list[int], eos: set[int]) -> list[int]:
+    """Generated tokens of one row, cut at its own EOS so batch padding is dropped."""
+    for index, token in enumerate(row):
+        if token in eos:
+            return row[: index + 1]
+    return row
+
+
 @torch.inference_mode()
 def generate(
     model: Any,
     tokenizer: Any,
     steerer: Steerer,
-    task: dict[str, Any],
+    tasks: list[dict[str, Any]],
     capture_key: str,
     options: dict[str, Any] | None,
     max_new_tokens: int,
-) -> dict[str, Any]:
-    rendered = tokenizer.apply_chat_template(
-        [{"role": "user", "content": task["prompt"]}],
-        tokenize=False,
-        add_generation_prompt=True,
-        enable_thinking=True,
-    )
-    inputs = tokenizer([rendered], return_tensors="pt").to(model.device)
-    detector = UniqueNGramLoopDetector(inputs.input_ids.shape[1], **options) if options is not None else None
+) -> list[dict[str, Any]]:
+    rendered = [
+        tokenizer.apply_chat_template(
+            [{"role": "user", "content": task["prompt"]}],
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=True,
+        )
+        for task in tasks
+    ]
+    inputs = tokenizer(rendered, return_tensors="pt", padding=True).to(model.device)
+    prompt_width = inputs.input_ids.shape[1]
+    eos = eos_ids(tokenizer)
+    detector = BatchedLoopDetector(prompt_width, len(tasks), eos, options) if options is not None else None
     started = time.perf_counter()
-    with steerer.apply(task["pair"], task["layer"], task["alpha"]):
+    with steerer.apply(tasks[0]["pair"], tasks[0]["layer"], tasks[0]["alpha"]):
         output = model.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
@@ -363,46 +435,58 @@ def generate(
             do_sample=False,
             **({"stopping_criteria": StoppingCriteriaList([detector])} if detector is not None else {}),
         )
-    generation_seconds = time.perf_counter() - started
-    continuation = output[0, inputs.input_ids.shape[1] :]
-    token_ids = continuation.tolist()
-    start, end, reasoning_status = thinking_span(tokenizer, token_ids, len(token_ids))
-    reasoning_tokens = 0 if start is None else end - start
-    text = tokenizer.decode(continuation, skip_special_tokens=False)
-    ended_with_eos = bool(token_ids) and token_ids[-1] in eos_ids(tokenizer)
-    hit_context_limit = output.shape[1] >= model.config.max_position_embeddings and not ended_with_eos
-    hit_token_budget = len(token_ids) >= max_new_tokens and not ended_with_eos
-    correct = score(task["benchmark"], text, task["answer"]) if reasoning_status == "closed_thinking" else False
-    loop_detection = detector.metadata(len(token_ids)) if detector is not None else {"enabled": False, "detected": False, "forced_stop": False}
-    return {
-        "key": task_key(task),
-        "benchmark": task["benchmark"],
-        "id": task["id"],
-        "model": MODEL_ID,
-        "dtype": "float16",
-        "steering_version": STEERING_VERSION,
-        "vector_capture_key": capture_key,
-        "vector_method": "diff",
-        "concept_pair": task["pair"],
-        "concept": task["concept"],
-        "layer": task["layer"],
-        "alpha": task["alpha"],
-        "baseline_repeat": task.get("baseline_repeat"),
-        "prompt_sha256": prompt_hash(task),
-        "output": text,
-        "reference": task["answer"],
-        "correct": correct,
-        "generated_token_count": len(token_ids),
-        "reasoning_token_count": reasoning_tokens,
-        "reasoning_status": reasoning_status,
-        "hit_context_limit": hit_context_limit,
-        "hit_token_budget": hit_token_budget,
-        "max_new_tokens": max_new_tokens,
-        "loop_detected": loop_detection["detected"],
-        "loop_forced_stop": loop_detection["forced_stop"],
-        "loop_detection": loop_detection,
-        "generation_seconds": generation_seconds,
-    }
+    batch_seconds = time.perf_counter() - started
+
+    records = []
+    for row, task in enumerate(tasks):
+        token_ids = split_continuation(output[row, prompt_width:].tolist(), eos)
+        start, end, reasoning_status = thinking_span(tokenizer, token_ids, len(token_ids))
+        reasoning_tokens = 0 if start is None else end - start
+        text = tokenizer.decode(token_ids, skip_special_tokens=False)
+        ended_with_eos = bool(token_ids) and token_ids[-1] in eos
+        hit_context_limit = output.shape[1] >= model.config.max_position_embeddings and not ended_with_eos
+        hit_token_budget = len(token_ids) >= max_new_tokens and not ended_with_eos
+        correct = score(task["benchmark"], text, task["answer"]) if reasoning_status == "closed_thinking" else False
+        loop_detection = (
+            detector.metadata(row, len(token_ids))
+            if detector is not None
+            else {"enabled": False, "detected": False, "forced_stop": False}
+        )
+        records.append(
+            {
+                "key": task_key(task),
+                "benchmark": task["benchmark"],
+                "id": task["id"],
+                "model": MODEL_ID,
+                "dtype": "float16",
+                "steering_version": STEERING_VERSION,
+                "vector_capture_key": capture_key,
+                "vector_method": "diff",
+                "concept_pair": task["pair"],
+                "concept": task["concept"],
+                "layer": task["layer"],
+                "alpha": task["alpha"],
+                "baseline_repeat": task.get("baseline_repeat"),
+                "prompt_sha256": prompt_hash(task),
+                "output": text,
+                "reference": task["answer"],
+                "correct": correct,
+                "generated_token_count": len(token_ids),
+                "reasoning_token_count": reasoning_tokens,
+                "reasoning_status": reasoning_status,
+                "hit_context_limit": hit_context_limit,
+                "hit_token_budget": hit_token_budget,
+                "max_new_tokens": max_new_tokens,
+                "loop_detected": loop_detection["detected"],
+                "loop_forced_stop": loop_detection["forced_stop"],
+                "loop_detection": loop_detection,
+                "batch_size": len(tasks),
+                "batch_seconds": batch_seconds,
+                # Amortised, so cost arithmetic over records stays meaningful.
+                "generation_seconds": batch_seconds / len(tasks),
+            }
+        )
+    return records
 
 
 def run_worker(args: argparse.Namespace) -> None:
@@ -423,6 +507,11 @@ def run_worker(args: argparse.Namespace) -> None:
         return
     model = AutoModelForCausalLM.from_pretrained(MODEL_ID, torch_dtype=torch.float16, device_map="auto")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+    # Batched generation needs the padding on the left, so the newest token of every row
+    # stays at position -1 where the steering hook injects.
+    tokenizer.padding_side = "left"
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
     nonzero = [task for task in pending if task["alpha"] != 0.0]
     deltas = load_deltas(
         sorted({task["pair"] for task in nonzero}),
@@ -433,15 +522,21 @@ def run_worker(args: argparse.Namespace) -> None:
     steerer = Steerer(model, deltas)
     options = loop_options(args)
     RESULTS.mkdir(exist_ok=True)
+    batches = condition_batches(pending, args.batch_size)
+    done = 0
     with path.open("a", encoding="utf-8") as handle:
-        for index, task in enumerate(pending, 1):
-            record = generate(model, tokenizer, steerer, task, capture_key, options, args.max_new_tokens)
-            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+        for batch in batches:
+            records = generate(model, tokenizer, steerer, batch, capture_key, options, args.max_new_tokens)
+            for record in records:
+                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
             handle.flush()
+            done += len(records)
             print(
-                f"{index}/{len(pending)} {record['key']} tokens={record['reasoning_token_count']} "
-                f"correct={record['correct']} loop={record['loop_detected']} "
-                f"seconds={record['generation_seconds']:.1f}",
+                f"{done}/{len(pending)} {records[0]['key']} +{len(records) - 1} more "
+                f"batch_seconds={records[0]['batch_seconds']:.1f} "
+                f"tokens={[r['reasoning_token_count'] for r in records]} "
+                f"correct={[r['correct'] for r in records]} "
+                f"loop={[r['loop_detected'] for r in records]}",
                 flush=True,
             )
 
@@ -466,6 +561,8 @@ def worker_command(args: argparse.Namespace, worker: int) -> list[str]:
         str(args.baseline_repeats),
         "--order",
         args.order,
+        "--batch-size",
+        str(args.batch_size),
         "--vector-dir",
         str(args.vector_dir),
         "--max-new-tokens",
