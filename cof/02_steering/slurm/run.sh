@@ -5,13 +5,14 @@
 #
 #   sbatch cof/02_steering/slurm/run.sh
 #
-# Resubmit the same file after a time limit; it resumes from the shards already written.
-# Set BATCH from what batchtest.sh measured.
+# The grid is roughly eleven days of one GPU per array task, so the limit is set past that
+# and the run finishes in a single submission. Resubmitting the same file is harmless
+# either way: it resumes from the shards already written.
 #
 #SBATCH --partition=rocky
 #SBATCH --gpus=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=24:00:00
+#SBATCH --time=14-00:00:00
 #SBATCH --array=0-7
 #SBATCH --output=steer_%A_%a.log
 
