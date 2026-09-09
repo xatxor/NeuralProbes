@@ -411,6 +411,39 @@ def split_continuation(row: list[int], eos: set[int]) -> list[int]:
     return row
 
 
+def generate_with_backoff(
+    model: Any,
+    tokenizer: Any,
+    steerer: Steerer,
+    tasks: list[dict[str, Any]],
+    capture_key: str,
+    options: dict[str, Any] | None,
+    max_new_tokens: int,
+) -> list[dict[str, Any]]:
+    """Generate a batch, halving it whenever the KV cache does not fit.
+
+    How much memory a batch needs is only known once its generations run long, so a size
+    that works for short reasoning can still exhaust the card on a steered condition that
+    runs to the token budget. Splitting and retrying keeps a multi-day run alive instead
+    of losing the whole job to one oversized batch.
+    """
+    try:
+        return generate(model, tokenizer, steerer, tasks, capture_key, options, max_new_tokens)
+    except torch.OutOfMemoryError:
+        if len(tasks) == 1:
+            raise
+        torch.cuda.empty_cache()
+        middle = len(tasks) // 2
+        print(f"out of memory on a batch of {len(tasks)}, retrying as {middle} + {len(tasks) - middle}", flush=True)
+        return [
+            record
+            for half in (tasks[:middle], tasks[middle:])
+            for record in generate_with_backoff(
+                model, tokenizer, steerer, half, capture_key, options, max_new_tokens
+            )
+        ]
+
+
 @torch.inference_mode()
 def generate(
     model: Any,
@@ -538,7 +571,9 @@ def run_worker(args: argparse.Namespace) -> None:
     done = 0
     with path.open("a", encoding="utf-8") as handle:
         for batch in batches:
-            records = generate(model, tokenizer, steerer, batch, capture_key, options, args.max_new_tokens)
+            records = generate_with_backoff(
+                model, tokenizer, steerer, batch, capture_key, options, args.max_new_tokens
+            )
             for record in records:
                 handle.write(json.dumps(record, ensure_ascii=False) + "\n")
             handle.flush()

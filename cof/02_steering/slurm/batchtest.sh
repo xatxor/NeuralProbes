@@ -15,12 +15,16 @@
 set -u
 cd $SLURM_SUBMIT_DIR
 
+export PYTORCH_ALLOC_CONF=expandable_segments:True
+
 VECTORS=~/korznikov_students/dm/exp_gendata/work/vectors/Qwen_Qwen3-8B--assistant--semantic
 OUT=cof/02_steering/results-batchtest
 
 nvidia-smi --query-gpu=name,memory.total --format=csv
 
-for SIZE in 1 8 16; do
+# Sizes are capped by the questions available, so --limit has to be at least the largest
+# size for the comparison to mean anything.
+for SIZE in 2 4 6; do
   echo "=== batch-size $SIZE ==="
   uv run python cof/02_steering/steer.py \
     --benchmark gpqa_diamond --limit 8 \

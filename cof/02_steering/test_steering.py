@@ -106,6 +106,24 @@ def main() -> None:
         assert len(cells) == 1
     assert sum(len(batch) for batch in batches) == len(mixed)
 
+    # An out-of-memory batch is halved and retried rather than killing the job.
+    attempts = []
+
+    def flaky(model, tokenizer, steerer, batch, capture_key, options, budget):
+        attempts.append(len(batch))
+        if len(batch) > 2:
+            raise torch.OutOfMemoryError("simulated")
+        return [{"key": task["id"]} for task in batch]
+
+    real_generate = steer.generate
+    steer.generate = flaky
+    try:
+        out = steer.generate_with_backoff(None, None, None, [{"id": str(i)} for i in range(8)], "k", None, 16)
+    finally:
+        steer.generate = real_generate
+    assert [record["key"] for record in out] == [str(i) for i in range(8)]
+    assert attempts[0] == 8 and max(attempts[1:]) <= 4 and min(attempts) == 2
+
     # A row is cut at its own EOS, so padding from longer rows never leaks into it.
     assert steer.split_continuation([5, 6, 99, 0, 0], {99}) == [5, 6, 99]
     assert steer.split_continuation([5, 6, 7], {99}) == [5, 6, 7]
