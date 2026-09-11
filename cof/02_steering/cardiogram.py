@@ -34,7 +34,7 @@ sys.path.insert(0, str(ROOT.parent.parent / "vika" / "01_eval"))
 from concept_analysis import thinking_span  # noqa: E402
 from evaluate import MODEL_ID, instruction, load_benchmark  # noqa: E402
 
-from steer import CONCEPTS, vector_manifest  # noqa: E402
+from steer import CONCEPTS, STEERING_VERSION, vector_manifest  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,7 +58,10 @@ def load_records(results: Path, benchmark: str, alpha: float) -> list[dict[str, 
             for line in handle:
                 if line.strip():
                     record = json.loads(line)
-                    records[record["key"]] = record
+                    # An older pilot in the same folder reuses the baseline keys, so records from
+                    # other versions of steer.py are dropped before de-duplication.
+                    if record.get("steering_version") == STEERING_VERSION:
+                        records[record["key"]] = record
     rows = [
         row for row in records.values()
         if row["benchmark"] == benchmark
