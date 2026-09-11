@@ -117,51 +117,70 @@ def accuracy_bars(rows: list[dict[str, Any]], baseline: dict[str, float], out: P
     # Most helpful concept on top, and the same order in every panel.
     concepts = sorted(names, key=lambda pair: -overall(pair))
 
+    magnitudes = sorted({abs(alpha) for alpha in alphas})
+    # Mirror strengths share a column, +alpha above -alpha, on one common scale, so each
+    # pair and each step in strength reads at a glance.
+    signs = [sign for sign in (1.0, -1.0) if any((alpha > 0) == (sign > 0) for alpha in alphas)]
+    results = {
+        (pair, alpha, layer): cell(pair, alpha, layer) for pair in concepts for alpha in alphas for layer in layers
+    }
+    limit = max([abs(result[0]) for result in results.values() if result is not None] + [1.0])
+
     figure, axes = plt.subplots(
-        1,
-        len(alphas),
-        figsize=(3.8 * len(alphas), 1.8 + 0.62 * len(concepts) * max(len(layers), 1)),
+        len(signs),
+        len(magnitudes),
+        figsize=(3.4 * len(magnitudes), len(signs) * (1.3 + 0.55 * len(concepts) * max(len(layers), 1))),
+        sharex=True,
         sharey=True,
         squeeze=False,
     )
     colors = plt.cm.tab10.colors
     height = 0.8 / len(layers)
-    for column, alpha in enumerate(alphas):
-        axis = axes[0][column]
-        for layer_index, layer in enumerate(layers):
-            positions, values, counts = [], [], []
-            for concept_index, pair in enumerate(concepts):
-                result = cell(pair, alpha, layer)
-                if result is None:
-                    continue
-                positions.append(concept_index + (layer_index - (len(layers) - 1) / 2) * height)
-                values.append(result[0])
-                counts.append(result[1])
-            axis.barh(positions, values, height=height, color=colors[layer_index % len(colors)], label=f"L{layer}")
-            for position, value, count in zip(positions, values, counts):
-                axis.annotate(
-                    f"{value:+.1f}" + (f" (n={count})" if count < full else ""),
-                    (value, position),
-                    textcoords="offset points",
-                    xytext=(4 if value >= 0 else -4, 0),
-                    ha="left" if value >= 0 else "right",
-                    va="center",
-                    fontsize=7,
-                )
-        axis.axvline(0, color="black", linewidth=0.8)
-        axis.set_title(f"alpha = {alpha:g}")
+    legend_axis = None
+    for row, sign in enumerate(signs):
+        for column, magnitude in enumerate(magnitudes):
+            axis = axes[row][column]
+            alpha = sign * magnitude
+            if alpha not in alphas:
+                axis.set_axis_off()
+                continue
+            legend_axis = legend_axis or axis
+            for layer_index, layer in enumerate(layers):
+                positions, values, counts = [], [], []
+                for concept_index, pair in enumerate(concepts):
+                    result = results[pair, alpha, layer]
+                    if result is None:
+                        continue
+                    positions.append(concept_index + (layer_index - (len(layers) - 1) / 2) * height)
+                    values.append(result[0])
+                    counts.append(result[1])
+                axis.barh(positions, values, height=height, color=colors[layer_index % len(colors)], label=f"L{layer}")
+                for position, value, count in zip(positions, values, counts):
+                    axis.annotate(
+                        f"{value:+.1f}" + (f" (n={count})" if count < full else ""),
+                        (value, position),
+                        textcoords="offset points",
+                        xytext=(4 if value >= 0 else -4, 0),
+                        ha="left" if value >= 0 else "right",
+                        va="center",
+                        fontsize=7,
+                    )
+            axis.axvline(0, color="black", linewidth=0.8)
+            axis.set_title(f"alpha = {alpha:+g}")
+            axis.grid(axis="x", alpha=0.25)
+        axes[row][0].set_ylabel("toward the concept" if sign > 0 else "toward the antagonist")
+    for axis in axes[-1]:
         axis.set_xlabel("Accuracy change vs alpha=0, pp")
-        axis.grid(axis="x", alpha=0.25)
-        axis.margins(x=0.25)
+    axes[0][0].set_xlim(-1.45 * limit, 1.45 * limit)
     axes[0][0].set_yticks(range(len(concepts)), [textwrap.fill(names[pair], 26) for pair in concepts], fontsize=8)
     axes[0][0].set_ylim(len(concepts) - 0.5, -0.5)
-    handles, labels = axes[0][0].get_legend_handles_labels()
+    handles, labels = legend_axis.get_legend_handles_labels()
     figure.legend(handles, labels, loc="lower center", ncol=len(layers))
     figure.suptitle(
         f"Steering effect on accuracy (n={full} questions; n shown where a condition is incomplete)",
         fontsize=11,
     )
-    figure.tight_layout(rect=(0, 0.06, 1, 0.96))
+    figure.tight_layout(rect=(0, 0.04, 1, 0.96))
     path = out / "steering-accuracy.png"
     figure.savefig(path, dpi=160)
     plt.close(figure)
