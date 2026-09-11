@@ -47,7 +47,14 @@ def load(results: Path, benchmark: str | None, version: int | None) -> list[dict
     everything = []
     for path in sorted(results.glob("steering*.jsonl")):
         with path.open(encoding="utf-8") as handle:
-            everything.extend(json.loads(line) for line in handle if line.strip())
+            for number, line in enumerate(handle, 1):
+                if not line.strip():
+                    continue
+                try:
+                    everything.append(json.loads(line))
+                except json.JSONDecodeError:
+                    # A job killed mid-write can leave a truncated last line.
+                    print(f"{path.name}:{number}: skipping an unreadable line")
     versions = collections.Counter(record.get("steering_version") for record in everything)
     known = [value for value in versions if value is not None]
     if not known:

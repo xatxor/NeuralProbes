@@ -276,9 +276,14 @@ def compatible(record: dict[str, Any], task: dict[str, Any], capture_key: str, m
 def iter_records(path: Path):
     if path.exists():
         with path.open(encoding="utf-8") as handle:
-            for line in handle:
-                if line.strip():
+            for number, line in enumerate(handle, 1):
+                if not line.strip():
+                    continue
+                try:
                     yield json.loads(line)
+                except json.JSONDecodeError:
+                    # A job killed mid-write leaves a truncated last line; that record is simply redone.
+                    print(f"{path}:{number}: skipping an unreadable line", file=sys.stderr, flush=True)
 
 
 def result_path(args: argparse.Namespace) -> Path:

@@ -177,6 +177,12 @@ def main() -> None:
         )
         assert (root / "steering.jsonl").read_text() == '{"key": "previous"}\n'
         steer.RESULTS = old_results
+
+    # A job cancelled mid-write leaves a truncated last line; resume must skip it, not crash.
+    with tempfile.TemporaryDirectory() as directory:
+        shard = Path(directory) / "steering.worker-00-of-08.jsonl"
+        shard.write_text('{"key": "done"}\n{"key": "cut off mid-wri', encoding="utf-8")
+        assert [record["key"] for record in steer.iter_records(shard)] == ["done"]
     print("steering checks passed")
 
 

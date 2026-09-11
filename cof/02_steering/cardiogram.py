@@ -56,12 +56,17 @@ def load_records(results: Path, benchmark: str, alpha: float) -> list[dict[str, 
     for path in sorted(results.glob("steering*.jsonl")):
         with path.open(encoding="utf-8") as handle:
             for line in handle:
-                if line.strip():
+                if not line.strip():
+                    continue
+                try:
                     record = json.loads(line)
-                    # An older pilot in the same folder reuses the baseline keys, so records from
-                    # other versions of steer.py are dropped before de-duplication.
-                    if record.get("steering_version") == STEERING_VERSION:
-                        records[record["key"]] = record
+                except json.JSONDecodeError:
+                    # A job killed mid-write can leave a truncated last line.
+                    continue
+                # An older pilot in the same folder reuses the baseline keys, so records from
+                # other versions of steer.py are dropped before de-duplication.
+                if record.get("steering_version") == STEERING_VERSION:
+                    records[record["key"]] = record
     rows = [
         row for row in records.values()
         if row["benchmark"] == benchmark
