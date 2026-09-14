@@ -40,6 +40,11 @@ def parse_args() -> argparse.Namespace:
         help="Keep only records written by this version of steer.py (default: the newest present). "
         "An older pilot in the same folder shares keys with later runs and would otherwise be mixed in.",
     )
+    parser.add_argument(
+        "--include-partial",
+        action="store_true",
+        help="Also plot concepts that have not reached every question at every strength.",
+    )
     return parser.parse_args()
 
 
@@ -97,6 +102,27 @@ def cells(rows: list[dict[str, Any]]) -> dict[tuple[int, int], dict[float, list[
 def paired_delta(subset: list[dict[str, Any]], baseline: dict[str, float]) -> np.ndarray:
     """Per-question accuracy change against that question's own baseline."""
     return np.array([float(row["correct"]) - baseline[row["id"]] for row in subset if row["id"] in baseline])
+
+
+def only_complete(rows: list[dict[str, Any]], baseline: dict[str, float]) -> list[dict[str, Any]]:
+    """Drop concepts that have not reached every question at every strength.
+
+    A half-finished condition still draws a bar and a point, and at a few dozen questions
+    that bar is noise wide enough to read as an effect.
+    """
+    full = len(baseline)
+    alphas = sorted({row["alpha"] for row in rows if row["alpha"] != 0.0})
+    keep = set()
+    for key, by_alpha in cells(rows).items():
+        counts = [len(by_alpha.get(alpha, [])) for alpha in alphas]
+        name = next(row["concept"] for subset in by_alpha.values() for row in subset)
+        if all(count == full for count in counts):
+            keep.add(key)
+        else:
+            print(f"skipping {name}: {sum(counts)}/{full * len(alphas)} generations")
+    if not keep:
+        raise SystemExit("No concept is finished yet; pass --include-partial to plot anyway")
+    return [row for row in rows if row["alpha"] == 0.0 or (row["concept_pair"], row["layer"]) in keep]
 
 
 def accuracy_bars(rows: list[dict[str, Any]], baseline: dict[str, float], out: Path) -> Path:
@@ -315,6 +341,8 @@ def main() -> None:
     baseline = baseline_accuracy(rows)
     if not baseline:
         raise SystemExit("No alpha=0 baseline records; accuracy deltas need them")
+    if not args.include_partial:
+        rows = only_complete(rows, baseline)
     written = [
         accuracy_bars(rows, baseline, out),
         dose_response(rows, baseline, out),
