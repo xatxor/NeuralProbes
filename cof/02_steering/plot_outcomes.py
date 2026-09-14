@@ -313,7 +313,9 @@ def dose_response(
     axes[1].set_ylabel("Never closed thinking, % of runs")
     axes[2].set_ylabel("Median reasoning tokens")
     axes[2].set_xlabel(
-        "Steering strength, fraction of the residual-stream norm (negative = toward the antagonist)"
+        f"Steering strength, fraction of the residual-stream norm (N~{residual_norm:.0f} at the steered layer, estimated)"
+        "
+negative = toward the antagonist"
         if scale
         else "Steering alpha (negative = toward the antagonist)"
     )
@@ -328,14 +330,15 @@ def dose_response(
     figure.legend(handles, labels, loc="lower center", ncol=2, fontsize=8)
     accuracy = 100 * sum(baseline.values()) / full
     note = (
-        "green band = the range explored in the emotion-vector paper"
+        "green band: range explored in the emotion-vector paper"
         if scale
-        else "hollow = incomplete condition"
+        else "hollow: incomplete condition"
     )
     figure.suptitle(
-        f"Response to steering (n={full} questions, baseline accuracy {accuracy:.1f}%; {note})", fontsize=12
+        f"Response to steering
+n={full} questions, baseline accuracy {accuracy:.1f}% - {note}", fontsize=12
     )
-    figure.tight_layout(rect=(0, 0.04 + 0.018 * ((len(handles) + 1) // 2), 1, 0.97))
+    figure.tight_layout(rect=(0, 0.04 + 0.018 * ((len(handles) + 1) // 2), 1, 0.95))
     # The converted figure gets its own name, so both unit systems stay side by side.
     path = out / ("steering-dose-response-anthropic-units.png" if scale else "steering-dose-response.png")
     figure.savefig(path, dpi=160)
