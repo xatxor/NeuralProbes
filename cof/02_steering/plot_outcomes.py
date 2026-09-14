@@ -41,6 +41,19 @@ def parse_args() -> argparse.Namespace:
         "An older pilot in the same folder shares keys with later runs and would otherwise be mixed in.",
     )
     parser.add_argument(
+        "--vector-dir",
+        type=Path,
+        default=None,
+        help="Vector directory. Given it, the dose-response x axis is converted from alpha into "
+        "fractions of the residual-stream norm, the units the emotion-vector paper reports.",
+    )
+    parser.add_argument(
+        "--residual-norm",
+        type=float,
+        default=92.0,
+        help="Average residual-stream norm at the steered layer; only used with --vector-dir.",
+    )
+    parser.add_argument(
         "--include-partial",
         action="store_true",
         help="Also plot concepts that have not reached every question at every strength.",
@@ -123,6 +136,21 @@ def only_complete(rows: list[dict[str, Any]], baseline: dict[str, float]) -> lis
     if not keep:
         raise SystemExit("No concept is finished yet; pass --include-partial to plot anyway")
     return [row for row in rows if row["alpha"] == 0.0 or (row["concept_pair"], row["layer"]) in keep]
+
+
+def strength_scale(vector_dir: Path | None, residual_norm: float, rows: list[dict[str, Any]]) -> dict[tuple[int, int], float] | None:
+    """Per concept, the factor turning alpha into a fraction of the residual-stream norm."""
+    if vector_dir is None:
+        return None
+    import pandas as pd
+
+    table = pd.read_parquet(vector_dir / "pairs.parquet").set_index("pair_id")
+    scale: dict[tuple[int, int], float] = {}
+    for row in rows:
+        key = (row["concept_pair"], row["layer"])
+        if row["alpha"] != 0.0 and key not in scale:
+            scale[key] = float(table.loc[row["concept_pair"], f"L{row['layer']:02d}_diff_norm"]) / residual_norm
+    return scale
 
 
 def accuracy_bars(rows: list[dict[str, Any]], baseline: dict[str, float], out: Path) -> Path:
@@ -220,7 +248,13 @@ def accuracy_bars(rows: list[dict[str, Any]], baseline: dict[str, float], out: P
     return path
 
 
-def dose_response(rows: list[dict[str, Any]], baseline: dict[str, float], out: Path) -> Path:
+def dose_response(
+    rows: list[dict[str, Any]],
+    baseline: dict[str, float],
+    out: Path,
+    scale: dict[tuple[int, int], float] | None = None,
+    residual_norm: float = 92.0,
+) -> Path:
     """Accuracy change, share of unfinished runs and reasoning length along alpha, per concept."""
     rng = np.random.default_rng(20260911)
     full = len(baseline)
@@ -254,8 +288,11 @@ def dose_response(rows: list[dict[str, Any]], baseline: dict[str, float], out: P
                 )
             )
         points.sort()
-        x = [point[0] for point in points]
+        factor = scale.get((pair, layer), 1.0) if scale else 1.0
+        x = [point[0] * factor for point in points]
         label = textwrap.shorten(names[pair], 42) + (f" (L{layer})" if len(layers) > 1 else "")
+        if scale:
+            label += f"   |v|={factor * residual_norm:.1f}"
         axes[0].plot(x, [point[1] for point in points], color=color, marker="o", label=label)
         axes[0].fill_between(x, [point[2] for point in points], [point[3] for point in points], color=color, alpha=0.12)
         axes[1].plot(x, [point[4] for point in points], color=color, marker="o")
@@ -264,7 +301,7 @@ def dose_response(rows: list[dict[str, Any]], baseline: dict[str, float], out: P
         partial = [point for point in points if point[6] < full]
         for axis, column in ((axes[0], 1), (axes[1], 4), (axes[2], 5)):
             axis.scatter(
-                [point[0] for point in partial],
+                [point[0] * factor for point in partial],
                 [point[column] for point in partial],
                 facecolors="white",
                 edgecolors=color,
@@ -275,15 +312,32 @@ def dose_response(rows: list[dict[str, Any]], baseline: dict[str, float], out: P
     axes[0].set_ylabel("Accuracy change vs alpha=0, pp\n(95% bootstrap CI over questions)")
     axes[1].set_ylabel("Never closed thinking, % of runs")
     axes[2].set_ylabel("Median reasoning tokens")
-    axes[2].set_xlabel("Steering alpha (negative = toward the antagonist)")
+    axes[2].set_xlabel(
+        "Steering strength, fraction of the residual-stream norm (negative = toward the antagonist)"
+        if scale
+        else "Steering alpha (negative = toward the antagonist)"
+    )
+    if scale:
+        # The band the emotion-vector paper explored, for scale.
+        for axis in axes:
+            axis.axvspan(-0.1, 0.1, color="tab:green", alpha=0.10, zorder=0)
     for axis in axes:
         axis.grid(alpha=0.25)
         axis.axvline(0, color="black", linewidth=0.5, alpha=0.4)
     handles, labels = axes[0].get_legend_handles_labels()
     figure.legend(handles, labels, loc="lower center", ncol=2, fontsize=8)
-    figure.suptitle(f"Response to steering along alpha (n={full} questions; hollow = incomplete condition)", fontsize=12)
+    accuracy = 100 * sum(baseline.values()) / full
+    note = (
+        "green band = the range explored in the emotion-vector paper"
+        if scale
+        else "hollow = incomplete condition"
+    )
+    figure.suptitle(
+        f"Response to steering (n={full} questions, baseline accuracy {accuracy:.1f}%; {note})", fontsize=12
+    )
     figure.tight_layout(rect=(0, 0.04 + 0.018 * ((len(handles) + 1) // 2), 1, 0.97))
-    path = out / "steering-dose-response.png"
+    # The converted figure gets its own name, so both unit systems stay side by side.
+    path = out / ("steering-dose-response-anthropic-units.png" if scale else "steering-dose-response.png")
     figure.savefig(path, dpi=160)
     plt.close(figure)
     return path
@@ -345,7 +399,7 @@ def main() -> None:
         rows = only_complete(rows, baseline)
     written = [
         accuracy_bars(rows, baseline, out),
-        dose_response(rows, baseline, out),
+        dose_response(rows, baseline, out, strength_scale(args.vector_dir, args.residual_norm, rows), args.residual_norm),
         outcome_composition(rows, len(baseline), out),
     ]
     print(f"{len(rows)} records -> " + ", ".join(str(path) for path in written))
