@@ -31,6 +31,8 @@ BATCH=${BATCH:-4}
 # planning first, the joy control early, then honest admission (the specificity check), then
 # proof-style.
 CONCEPTS=${CONCEPTS:-657,532,459,703}
+# Empty means the default grid in steer.py; set it to run a different set of strengths.
+ALPHAS=${ALPHAS:-}
 # The worker count has to match the array size; SLURM exports it for array jobs.
 WORKERS=${SLURM_ARRAY_TASK_COUNT:-7}
 

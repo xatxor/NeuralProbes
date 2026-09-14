@@ -13,12 +13,22 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import steer
-from steer import ALPHAS, CONCEPTS, DEFAULT_CONCEPT_PAIRS, DEFAULT_LAYERS, Steerer, condition_specs, task_key, worker_command
+from steer import (
+    ALPHAS,
+    CONCEPTS,
+    DEFAULT_ALPHAS,
+    DEFAULT_CONCEPT_PAIRS,
+    DEFAULT_LAYERS,
+    Steerer,
+    condition_specs,
+    task_key,
+    worker_command,
+)
 from summarize import plot_results, summarize
 
 
 def main() -> None:
-    conditions = condition_specs(list(DEFAULT_CONCEPT_PAIRS), list(DEFAULT_LAYERS), list(ALPHAS))
+    conditions = condition_specs(list(DEFAULT_CONCEPT_PAIRS), list(DEFAULT_LAYERS), list(DEFAULT_ALPHAS))
     assert len(conditions) == 171
     assert {len((conditions * 30)[worker::10]) for worker in range(10)} == {513}
     assert sum(row["alpha"] == 0 for row in conditions) == 1
@@ -28,10 +38,10 @@ def main() -> None:
     steered_conditions = [row for row in conditions if row["alpha"] != 0.0]
     leading = [row for row in steered_conditions if row["pair"] == steered_conditions[0]["pair"]]
     assert steered_conditions[: len(leading)] == leading
-    assert {row["alpha"] for row in leading} == set(ALPHAS)
+    assert {row["alpha"] for row in leading} == set(DEFAULT_ALPHAS)
 
     # The other order covers every concept at one strength first.
-    by_alpha = condition_specs(list(DEFAULT_CONCEPT_PAIRS), list(DEFAULT_LAYERS), list(ALPHAS), 1, "alpha")
+    by_alpha = condition_specs(list(DEFAULT_CONCEPT_PAIRS), list(DEFAULT_LAYERS), list(DEFAULT_ALPHAS), 1, "alpha")
     steered_by_alpha = [row for row in by_alpha if row["alpha"] != 0.0]
     first = [row for row in steered_by_alpha if row["alpha"] == steered_by_alpha[0]["alpha"]]
     assert steered_by_alpha[: len(first)] == first
@@ -60,7 +70,7 @@ def main() -> None:
     assert task_key({**task, "pair": None, "layer": None, "alpha": 0.0, "baseline_repeat": 1}) == "aime_2024:0:baseline:repeat-1"
     args = SimpleNamespace(
         benchmark="math_500", num_workers=4, concept_pairs=list(DEFAULT_CONCEPT_PAIRS),
-        layers=list(DEFAULT_LAYERS), alphas=list(ALPHAS), baseline_repeats=1, limit=1,
+        layers=list(DEFAULT_LAYERS), alphas=list(DEFAULT_ALPHAS), baseline_repeats=1, limit=1,
         vector_dir=Path("/fake/vector/dir"), disable_loop_detection=False, loop_ngram_size=4,
         loop_window_tokens=1024, loop_unique_ratio_threshold=0.2, loop_check_every=64,
         loop_consecutive_windows=3, loop_min_new_tokens=2048, loop_extra_tokens=512,
@@ -72,6 +82,9 @@ def main() -> None:
     assert "--batch-size" in command
     assert "--results-dir" in command
     assert "--alphas=-3.0,-2.5,-2.0,-1.5,-1.0,1.0,1.5,2.0,2.5,3.0" in command
+    # Weak strengths are selectable but stay out of the default grid.
+    assert set(DEFAULT_ALPHAS) < set(ALPHAS)
+    assert 0.2 in ALPHAS and 0.2 not in DEFAULT_ALPHAS
     assert "--loop-window-tokens" in command and "--disable-loop-detection" not in command
     assert "--max-new-tokens" in command
     assert steer.loop_options(args)["unique_ratio_threshold"] == 0.2

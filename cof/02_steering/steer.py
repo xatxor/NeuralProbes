@@ -73,7 +73,12 @@ DEFAULT_ORDER = "concept"
 VALID_LAYERS = tuple(range(37))
 # Alpha 3.5 and above is a non-termination regime rather than a stronger effect: in the
 # pilot seven of ten generations at alpha 5 never closed their thinking block.
-ALPHAS = (-3.0, -2.5, -2.0, -1.5, -1.0, 1.0, 1.5, 2.0, 2.5, 3.0)
+DEFAULT_ALPHAS = (-3.0, -2.5, -2.0, -1.5, -1.0, 1.0, 1.5, 2.0, 2.5, 3.0)
+# Selectable but outside the default grid. Alpha counts in multiples of the pair's own vector
+# norm, which at layer 18 is roughly a twelfth of the residual-stream norm, so alpha 1 is
+# already about as strong as the largest strength used in the emotion-steering work that this
+# grid follows. Everything below 1 is the untested window.
+ALPHAS = (-3.0, -2.5, -2.0, -1.5, -1.0, -0.5, -0.2, 0.2, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0)
 
 
 def comma_values(text: str, cast: Any) -> list[Any]:
@@ -94,7 +99,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--worker-index", type=int, default=None, help=argparse.SUPPRESS)
     parser.add_argument("--concept-pairs", default=",".join(map(str, DEFAULT_CONCEPT_PAIRS)))
     parser.add_argument("--layers", default=",".join(map(str, DEFAULT_LAYERS)))
-    parser.add_argument("--alphas", default=",".join(map(str, ALPHAS)))
+    parser.add_argument("--alphas", default=",".join(map(str, DEFAULT_ALPHAS)))
     parser.add_argument("--baseline-repeats", type=int, default=DEFAULT_BASELINE_REPEATS)
     parser.add_argument(
         "--order",
