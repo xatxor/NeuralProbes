@@ -3,7 +3,11 @@ generations ended.
 
 Accuracy alone hides the dominant failure mode of strong steering, where a run scores
 zero because it never closed its thinking block rather than because it reasoned badly,
-so the outcome composition is plotted alongside it.
+so the outcome composition is plotted alongside it. Reasoning length is shown apart for
+right and wrong answers: unfinished runs sit at the token budget and would otherwise drag
+a single median toward it.
+
+Labels are in Russian, the language the results are reported in.
 """
 
 from __future__ import annotations
@@ -21,11 +25,17 @@ import numpy as np
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-CUT = "never closed thinking"
-WRONG = "wrong answer"
-CORRECT = "correct"
+CUT = "не закрыл рассуждение, ответа нет"
+WRONG = "неверный ответ"
+CORRECT = "верный ответ"
 OUTCOME_COLORS = {CORRECT: "#2a9d5c", WRONG: "#d95f4c", CUT: "#6b6b6b"}
 BOOTSTRAP_SAMPLES = 2_000
+# A median over a handful of answers is noise, so such points are left off the length panels.
+MIN_ANSWERS = 10
+# Fixed per concept, so a concept keeps its colour when others finish and join the plot.
+CONCEPT_COLORS = {657: "#2a78d6", 532: "#eb6834", 367: "#1baf7a", 459: "#eda100", 703: "#4a3aa7"}
+FALLBACK_COLORS = ("#e87ba4", "#008300", "#e34948")
+BENCHMARK_NAMES = {"gpqa_diamond": "GPQA Diamond", "aime_2024": "AIME 2024", "math_500": "MATH-500"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -93,6 +103,10 @@ def outcome(row: dict[str, Any]) -> str:
     return CORRECT if row["correct"] else WRONG
 
 
+def concept_color(pair: int) -> str:
+    return CONCEPT_COLORS.get(pair, FALLBACK_COLORS[pair % len(FALLBACK_COLORS)])
+
+
 def baseline_accuracy(rows: list[dict[str, Any]]) -> dict[str, float]:
     per_question: dict[str, list[bool]] = collections.defaultdict(list)
     for row in rows:
@@ -151,6 +165,20 @@ def strength_scale(vector_dir: Path | None, residual_norm: float, rows: list[dic
         if row["alpha"] != 0.0 and key not in scale:
             scale[key] = float(table.loc[row["concept_pair"], f"L{row['layer']:02d}_diff_norm"]) / residual_norm
     return scale
+
+
+def antagonists(vector_dir: Path | None) -> dict[int, str]:
+    if vector_dir is None:
+        return {}
+    import pandas as pd
+
+    table = pd.read_parquet(vector_dir / "pairs.parquet")
+    return dict(zip(table["pair_id"], table["antagonist"]))
+
+
+def tidy(axis: plt.Axes) -> None:
+    axis.grid(alpha=0.25)
+    axis.spines[["top", "right"]].set_visible(False)
 
 
 def accuracy_bars(rows: list[dict[str, Any]], baseline: dict[str, float], out: Path) -> Path:
@@ -215,7 +243,7 @@ def accuracy_bars(rows: list[dict[str, Any]], baseline: dict[str, float], out: P
                     positions.append(concept_index + (layer_index - (len(layers) - 1) / 2) * height)
                     values.append(result[0])
                     counts.append(result[1])
-                axis.barh(positions, values, height=height, color=colors[layer_index % len(colors)], label=f"L{layer}")
+                axis.barh(positions, values, height=height, color=colors[layer_index % len(colors)], label=f"слой {layer}")
                 for position, value, count in zip(positions, values, counts):
                     axis.annotate(
                         f"{value:+.1f}" + (f" (n={count})" if count < full else ""),
@@ -227,18 +255,18 @@ def accuracy_bars(rows: list[dict[str, Any]], baseline: dict[str, float], out: P
                         fontsize=7,
                     )
             axis.axvline(0, color="black", linewidth=0.8)
-            axis.set_title(f"alpha = {alpha:+g}")
+            axis.set_title(f"α = {alpha:+g}")
             axis.grid(axis="x", alpha=0.25)
-        axes[row][0].set_ylabel("toward the concept" if sign > 0 else "toward the antagonist")
+        axes[row][0].set_ylabel("к концепту" if sign > 0 else "к антагонисту")
     for axis in axes[-1]:
-        axis.set_xlabel("Accuracy change vs alpha=0, pp")
+        axis.set_xlabel("Изменение accuracy\nотносительно α = 0, п.п.")
     axes[0][0].set_xlim(-1.45 * limit, 1.45 * limit)
     axes[0][0].set_yticks(range(len(concepts)), [textwrap.fill(names[pair], 26) for pair in concepts], fontsize=8)
     axes[0][0].set_ylim(len(concepts) - 0.5, -0.5)
     handles, labels = legend_axis.get_legend_handles_labels()
-    figure.legend(handles, labels, loc="lower center", ncol=len(layers))
+    figure.legend(handles, labels, loc="lower center", ncol=len(layers), frameon=False)
     figure.suptitle(
-        f"Steering effect on accuracy (n={full} questions; n shown where a condition is incomplete)",
+        f"Влияние стиринга на accuracy ({full} вопросов; n подписано там, где посчитаны не все)",
         fontsize=11,
     )
     figure.tight_layout(rect=(0, 0.04, 1, 0.96))
@@ -255,21 +283,25 @@ def dose_response(
     scale: dict[tuple[int, int], float] | None = None,
     residual_norm: float = 92.0,
 ) -> Path:
-    """Accuracy change, share of unfinished runs and reasoning length along alpha, per concept."""
+    """Accuracy change and the reasoning length of right and wrong answers along alpha, per concept."""
     rng = np.random.default_rng(20260911)
     full = len(baseline)
     grouped = cells(rows)
     names = {row["concept_pair"]: row["concept"] for row in rows if row["alpha"] != 0.0}
-    layers = {layer for _, layer in grouped}
+    layers = sorted({layer for _, layer in grouped})
     base_rows = [row for row in rows if row["alpha"] == 0.0]
-    base_cut = 100 * float(np.mean([outcome(row) == CUT for row in base_rows]))
-    base_length = float(np.median([row["reasoning_token_count"] for row in base_rows]))
 
-    figure, axes = plt.subplots(3, 1, figsize=(9, 11.5), sharex=True)
-    colors = plt.cm.tab20.colors
-    for index, ((pair, layer), by_alpha) in enumerate(sorted(grouped.items(), key=lambda item: names[item[0][0]])):
-        color = colors[index % len(colors)]
-        points = [(0.0, 0.0, 0.0, 0.0, base_cut, base_length, full)]
+    def length(subset: list[dict[str, Any]], right: bool) -> float:
+        values = [row["reasoning_token_count"] for row in subset if bool(row["correct"]) == right]
+        # NaN breaks the line, so a dropped point shows as a gap rather than a straight join.
+        return float(np.median(values)) if len(values) >= MIN_ANSWERS else float("nan")
+
+    figure, axes = plt.subplots(3, 1, figsize=(9, 12), sharex=True)
+    dropped = {1: False, 2: False}
+    partial_any = False
+    for (pair, layer), by_alpha in sorted(grouped.items(), key=lambda item: names[item[0][0]]):
+        color = concept_color(pair)
+        points = [(0.0, 0.0, 0.0, 0.0, length(base_rows, True), length(base_rows, False), full)]
         for alpha, subset in by_alpha.items():
             deltas = paired_delta(subset, baseline)
             if not len(deltas):
@@ -282,62 +314,78 @@ def dose_response(
                     100 * float(deltas.mean()),
                     100 * float(low),
                     100 * float(high),
-                    100 * float(np.mean([outcome(row) == CUT for row in subset])),
-                    float(np.median([row["reasoning_token_count"] for row in subset])),
+                    length(subset, True),
+                    length(subset, False),
                     len(deltas),
                 )
             )
-        points.sort()
+        points.sort(key=lambda point: point[0])
         factor = scale.get((pair, layer), 1.0) if scale else 1.0
         x = [point[0] * factor for point in points]
-        label = textwrap.shorten(names[pair], 42) + (f" (L{layer})" if len(layers) > 1 else "")
+        label = textwrap.shorten(names[pair], 42) + (f" (слой {layer})" if len(layers) > 1 else "")
         if scale:
-            label += f"   |v|={factor * residual_norm:.1f}"
-        axes[0].plot(x, [point[1] for point in points], color=color, marker="o", label=label)
-        axes[0].fill_between(x, [point[2] for point in points], [point[3] for point in points], color=color, alpha=0.12)
-        axes[1].plot(x, [point[4] for point in points], color=color, marker="o")
-        axes[2].plot(x, [point[5] for point in points], color=color, marker="o")
+            label += f"   |v| = {factor * residual_norm:.1f}"
+        axes[0].plot(x, [point[1] for point in points], color=color, linewidth=2, marker="o", markersize=5, label=label)
+        # The shaded band is where the mean would likely land on another draw of questions.
+        axes[0].fill_between(
+            x, [point[2] for point in points], [point[3] for point in points], color=color, alpha=0.12, linewidth=0
+        )
+        for panel, column in ((1, 4), (2, 5)):
+            values = [point[column] for point in points]
+            dropped[panel] = dropped[panel] or any(np.isnan(values))
+            axes[panel].plot(x, values, color=color, linewidth=2, marker="o", markersize=5)
         # Hollow markers flag conditions that have not reached every question yet.
         partial = [point for point in points if point[6] < full]
-        for axis, column in ((axes[0], 1), (axes[1], 4), (axes[2], 5)):
-            axis.scatter(
-                [point[0] * factor for point in partial],
-                [point[column] for point in partial],
-                facecolors="white",
-                edgecolors=color,
-                zorder=3,
-                s=42,
-            )
+        partial_any = partial_any or bool(partial)
+        axes[0].scatter(
+            [point[0] * factor for point in partial],
+            [point[1] for point in partial],
+            facecolors="white",
+            edgecolors=color,
+            zorder=3,
+            s=42,
+        )
+
     axes[0].axhline(0, color="black", linewidth=0.8)
-    axes[0].set_ylabel("Accuracy change vs alpha=0, pp\n(95% bootstrap CI over questions)")
-    axes[1].set_ylabel("Never closed thinking, % of runs")
-    axes[2].set_ylabel("Median reasoning tokens")
-    axes[2].set_xlabel(
-        f"Steering strength, fraction of the residual-stream norm"
-        f" (N~{residual_norm:.0f} at the steered layer, estimated)"
-        "\nnegative = toward the antagonist"
-        if scale
-        else "Steering alpha (negative = toward the antagonist)"
+    axes[0].set_title("Accuracy", loc="left", fontsize=11)
+    axes[0].set_ylabel("Изменение относительно\nα = 0, п.п.")
+    gap = f" (точки, где таких ответов меньше {MIN_ANSWERS}, не показаны)"
+    axes[1].set_title("Длина reasoning у верных ответов" + (gap if dropped[1] else ""), loc="left", fontsize=11)
+    axes[2].set_title(
+        "Длина reasoning у неверных ответов, включая незакрытые рассуждения" + (gap if dropped[2] else ""),
+        loc="left",
+        fontsize=11,
     )
-    if scale:
-        # The band the emotion-vector paper explored, for scale.
-        for axis in axes:
-            axis.axvspan(-0.1, 0.1, color="tab:green", alpha=0.10, zorder=0)
+    budget = max((row.get("max_new_tokens") or 0) for row in rows)
+    for axis in axes[1:]:
+        axis.set_ylabel("Медиана, токены")
+        if budget:
+            # Unfinished runs stop here, which is why wrong answers can sit on this line.
+            axis.axhline(budget, color="#898781", linewidth=1, linestyle="--")
+            axis.text(0.01, budget, f"лимит генерации {budget:,} токенов".replace(",", " "),
+                      transform=axis.get_yaxis_transform(), va="bottom", fontsize=8, color="#52514e")
+            axis.set_ylim(0, budget * 1.1)
+        else:
+            axis.set_ylim(bottom=0)
+    axes[2].set_xlabel(
+        "Сила стиринга, доля нормы residual stream\nминус — к антагонисту, плюс — к концепту"
+        if scale
+        else "α, во сколько раз прибавлен вектор концепта\nминус — к антагонисту, плюс — к концепту"
+    )
     for axis in axes:
-        axis.grid(alpha=0.25)
+        tidy(axis)
         axis.axvline(0, color="black", linewidth=0.5, alpha=0.4)
     handles, labels = axes[0].get_legend_handles_labels()
-    figure.legend(handles, labels, loc="lower center", ncol=2, fontsize=8)
+    figure.legend(handles, labels, loc="lower center", ncol=2, fontsize=9, frameon=False)
     accuracy = 100 * sum(baseline.values()) / full
-    note = (
-        "green band: range explored in the emotion-vector paper"
-        if scale
-        else "hollow: incomplete condition"
+    benchmarks = sorted({BENCHMARK_NAMES.get(row["benchmark"], row["benchmark"]) for row in rows})
+    title = (
+        "Отклик на стиринг" + (f", слой {layers[0]}" if len(layers) == 1 else "")
+        + f"\n{', '.join(benchmarks)}: {full} вопросов, accuracy без стиринга {accuracy:.1f}%"
     )
-    figure.suptitle(
-        f"Response to steering\nn={full} questions, baseline accuracy {accuracy:.1f}% - {note}",
-        fontsize=12,
-    )
+    if partial_any:
+        title += "; полые точки посчитаны не на всех вопросах"
+    figure.suptitle(title, fontsize=12)
     figure.tight_layout(rect=(0, 0.04 + 0.018 * ((len(handles) + 1) // 2), 1, 0.95))
     # The converted figure gets its own name, so both unit systems stay side by side.
     path = out / ("steering-dose-response-anthropic-units.png" if scale else "steering-dose-response.png")
@@ -346,14 +394,24 @@ def dose_response(
     return path
 
 
-def outcome_composition(rows: list[dict[str, Any]], full: int, out: Path) -> Path:
+def outcome_composition(
+    rows: list[dict[str, Any]],
+    full: int,
+    out: Path,
+    scale: dict[tuple[int, int], float] | None = None,
+    opposite: dict[int, str] | None = None,
+) -> Path:
+    opposite = opposite or {}
     concepts = sorted({(row["concept_pair"], row["concept"]) for row in rows if row["concept_pair"]}, key=lambda item: item[1])
     alphas = sorted({row["alpha"] for row in rows})
+    # Each concept converts alpha with its own factor, so each panel needs its own tick labels.
     figure, axes = plt.subplots(
-        len(concepts), 1, figsize=(8, 2.2 + 1.8 * len(concepts)), sharex=True, squeeze=False
+        len(concepts), 1, figsize=(8, 2.4 + 2.2 * len(concepts)), sharex=not scale, squeeze=False
     )
     for row_index, (pair, name) in enumerate(concepts):
         axis = axes[row_index][0]
+        layer = next(row["layer"] for row in rows if row["concept_pair"] == pair)
+        factor = scale.get((pair, layer)) if scale else None
         labels, sizes = [], []
         counts = {key: [] for key in (CORRECT, WRONG, CUT)}
         for alpha in alphas:
@@ -363,27 +421,36 @@ def outcome_composition(rows: list[dict[str, Any]], full: int, out: Path) -> Pat
             ]
             if not subset:
                 continue
-            labels.append(f"{alpha:g}")
+            labels.append(f"{alpha:g}" if factor is None or alpha == 0.0 else f"{alpha:g}\n{alpha * factor:+.2f}")
             sizes.append(len(subset))
             tally = collections.Counter(outcome(r) for r in subset)
             for key in counts:
                 counts[key].append(100 * tally[key] / len(subset))
         bottoms = [0.0] * len(labels)
         for key in (CORRECT, WRONG, CUT):
-            axis.bar(labels, counts[key], bottom=bottoms, color=OUTCOME_COLORS[key], label=key, width=0.6)
+            axis.bar(
+                labels, counts[key], bottom=bottoms, color=OUTCOME_COLORS[key], label=key,
+                width=0.6, edgecolor="white", linewidth=1,
+            )
             bottoms = [b + v for b, v in zip(bottoms, counts[key])]
         for position, size in enumerate(sizes):
             if size < full:
                 axis.text(position, 102, f"n={size}", ha="center", va="bottom", fontsize=7)
-        axis.set_ylabel("% of runs")
-        axis.set_title(textwrap.fill(name, 60), fontsize=10)
+        axis.set_ylabel("% генераций")
+        title = name + (f"  ↔  {opposite[pair]}" if pair in opposite else "")
+        axis.set_title(textwrap.fill(title, 100), fontsize=10)
         axis.set_ylim(0, 112)
         axis.set_yticks(range(0, 101, 20))
-    axes[-1][0].set_xlabel("Steering alpha (0 = unsteered baseline)")
+        axis.spines[["top", "right"]].set_visible(False)
+    axes[-1][0].set_xlabel(
+        "α (верхняя строка) и та же сила в долях нормы residual stream (нижняя строка); 0 — без стиринга"
+        if scale
+        else "α (0 — без стиринга)"
+    )
     handles, labels = axes[0][0].get_legend_handles_labels()
-    figure.legend(handles, labels, loc="lower center", ncol=3)
-    figure.suptitle("How generations ended", fontsize=12)
-    figure.tight_layout(rect=(0, 0.06, 1, 0.96))
+    figure.legend(handles, labels, loc="lower center", ncol=3, frameon=False)
+    figure.suptitle("Чем закончились генерации", fontsize=12)
+    figure.tight_layout(rect=(0, 0.05, 1, 0.96))
     path = out / "steering-outcomes.png"
     figure.savefig(path, dpi=160)
     plt.close(figure)
@@ -400,10 +467,11 @@ def main() -> None:
         raise SystemExit("No alpha=0 baseline records; accuracy deltas need them")
     if not args.include_partial:
         rows = only_complete(rows, baseline)
+    scale = strength_scale(args.vector_dir, args.residual_norm, rows)
     written = [
         accuracy_bars(rows, baseline, out),
-        dose_response(rows, baseline, out, strength_scale(args.vector_dir, args.residual_norm, rows), args.residual_norm),
-        outcome_composition(rows, len(baseline), out),
+        dose_response(rows, baseline, out, scale, args.residual_norm),
+        outcome_composition(rows, len(baseline), out, scale, antagonists(args.vector_dir)),
     ]
     print(f"{len(rows)} records -> " + ", ".join(str(path) for path in written))
 
