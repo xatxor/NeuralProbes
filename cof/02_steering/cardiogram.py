@@ -47,7 +47,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--concept-pairs", default=None, help="Comma-separated pair IDs; default: every CoT concept")
     parser.add_argument("--bins", type=int, default=50)
     parser.add_argument("--alpha", type=float, default=0.0, help="Which steering condition to read; 0 is the baseline")
-    parser.add_argument("--max-tokens", type=int, default=None, help="Skip traces longer than this, to bound memory")
+    parser.add_argument("--max-tokens", type=int, default=None, help="Skip traces longer than this")
+    parser.add_argument(
+        "--chunk-tokens",
+        type=int,
+        default=1024,
+        help="How many tokens go through the model at once. Lower it if the card still runs out.",
+    )
     return parser.parse_args()
 
 
@@ -118,6 +124,7 @@ def trace_cosines(
     record: dict[str, Any],
     prompt: str,
     directions: torch.Tensor,
+    chunk_tokens: int,
 ) -> np.ndarray | None:
     """Per-reasoning-token cosine against each direction, shaped (pairs, reasoning tokens)."""
     rendered = tokenizer.apply_chat_template(
@@ -132,12 +139,23 @@ def trace_cosines(
     start, end, status = thinking_span(tokenizer, token_ids, len(token_ids))
     if status != "closed_thinking" or start is None or end <= start:
         return None
-    sequence = torch.cat([prompt_ids, continuation_ids], dim=1).to(model.device)
-    model(sequence)
-    if capture.value is None:
-        return None
+    # Nothing after the reasoning span is needed, and the answer text can run long.
+    sequence = torch.cat([prompt_ids, continuation_ids[:, :end]], dim=1).to(model.device)
     offset = prompt_ids.shape[1]
-    hidden = capture.value[offset + start : offset + end]
+
+    # The trace goes through in chunks, carrying the KV cache: attention over many thousands
+    # of tokens at once allocates more than the card has. Only the base model is called, so
+    # no logits are built over the vocabulary at every position.
+    captured, cache = [], None
+    for position in range(0, sequence.shape[1], chunk_tokens):
+        output = model.model(
+            sequence[:, position : position + chunk_tokens], past_key_values=cache, use_cache=True
+        )
+        cache = output.past_key_values
+        if capture.value is None:
+            return None
+        captured.append(capture.value)
+    hidden = torch.cat(captured, dim=0)[offset + start : offset + end]
     hidden = F.normalize(hidden.float(), dim=-1).to(dtype=directions.dtype)
     return (hidden @ directions.T).float().cpu().numpy().T
 
@@ -182,7 +200,13 @@ def main() -> None:
                 print(f"{index}/{len(records)} {record['key']}: question not in benchmark, skipped", flush=True)
                 continue
             cosines = trace_cosines(
-                model, tokenizer, capture, record, instruction(args.benchmark, example["prompt"]), directions
+                model,
+                tokenizer,
+                capture,
+                record,
+                instruction(args.benchmark, example["prompt"]),
+                directions,
+                args.chunk_tokens,
             )
             if cosines is None:
                 print(f"{index}/{len(records)} {record['key']}: no usable reasoning span, skipped", flush=True)
