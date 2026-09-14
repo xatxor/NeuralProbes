@@ -313,9 +313,9 @@ def dose_response(
     axes[1].set_ylabel("Never closed thinking, % of runs")
     axes[2].set_ylabel("Median reasoning tokens")
     axes[2].set_xlabel(
-        f"Steering strength, fraction of the residual-stream norm (N~{residual_norm:.0f} at the steered layer, estimated)"
-        "
-negative = toward the antagonist"
+        f"Steering strength, fraction of the residual-stream norm"
+        f" (N~{residual_norm:.0f} at the steered layer, estimated)"
+        "\nnegative = toward the antagonist"
         if scale
         else "Steering alpha (negative = toward the antagonist)"
     )
@@ -335,8 +335,8 @@ negative = toward the antagonist"
         else "hollow: incomplete condition"
     )
     figure.suptitle(
-        f"Response to steering
-n={full} questions, baseline accuracy {accuracy:.1f}% - {note}", fontsize=12
+        f"Response to steering\nn={full} questions, baseline accuracy {accuracy:.1f}% - {note}",
+        fontsize=12,
     )
     figure.tight_layout(rect=(0, 0.04 + 0.018 * ((len(handles) + 1) // 2), 1, 0.95))
     # The converted figure gets its own name, so both unit systems stay side by side.
