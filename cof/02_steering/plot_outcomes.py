@@ -107,11 +107,16 @@ def concept_color(pair: int) -> str:
     return CONCEPT_COLORS.get(pair, FALLBACK_COLORS[pair % len(FALLBACK_COLORS)])
 
 
-def baseline_accuracy(rows: list[dict[str, Any]]) -> dict[str, float]:
-    per_question: dict[str, list[bool]] = collections.defaultdict(list)
+def question_key(row: dict[str, Any]) -> tuple[str, str]:
+    """Questions are numbered from zero within each benchmark, so the name belongs in the key."""
+    return row["benchmark"], row["id"]
+
+
+def baseline_accuracy(rows: list[dict[str, Any]]) -> dict[tuple[str, str], float]:
+    per_question: dict[tuple[str, str], list[bool]] = collections.defaultdict(list)
     for row in rows:
         if row["alpha"] == 0.0:
-            per_question[row["id"]].append(bool(row["correct"]))
+            per_question[question_key(row)].append(bool(row["correct"]))
     return {question: sum(values) / len(values) for question, values in per_question.items()}
 
 
@@ -126,9 +131,11 @@ def cells(rows: list[dict[str, Any]]) -> dict[tuple[int, int], dict[float, list[
     return grouped
 
 
-def paired_delta(subset: list[dict[str, Any]], baseline: dict[str, float]) -> np.ndarray:
+def paired_delta(subset: list[dict[str, Any]], baseline: dict[tuple[str, str], float]) -> np.ndarray:
     """Per-question accuracy change against that question's own baseline."""
-    return np.array([float(row["correct"]) - baseline[row["id"]] for row in subset if row["id"] in baseline])
+    return np.array(
+        [float(row["correct"]) - baseline[question_key(row)] for row in subset if question_key(row) in baseline]
+    )
 
 
 def only_complete(rows: list[dict[str, Any]], baseline: dict[str, float]) -> list[dict[str, Any]]:
