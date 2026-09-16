@@ -15,6 +15,7 @@ Reads the scores saved by cardiogram.py, so it needs neither a GPU nor the model
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -29,6 +30,20 @@ INCORRECT_COLOR = "#eb6834"
 CONNECTOR_COLOR = "#d6d3cc"
 BOOTSTRAP_SAMPLES = 2_000
 PERMUTATIONS = 1_000
+# joy is the control of the grid: it belongs in the cardiogram, not among the CoT concepts.
+CONTROL_PAIRS = (532,)
+
+
+def resolve_pairs(value: str) -> set[int] | None:
+    """Which concepts compete for the top rows: all of them, the CoT grid, or explicit ids."""
+    if value == "all":
+        return None
+    if value == "cot":
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from steer import DEFAULT_CONCEPT_PAIRS
+
+        return {pair for pair in DEFAULT_CONCEPT_PAIRS if pair not in CONTROL_PAIRS}
+    return {int(item) for item in value.split(",") if item.strip()}
 
 
 def parse_args() -> argparse.Namespace:
@@ -37,6 +52,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--vector-dir", type=Path, required=True, help="For the concept and antagonist names")
     parser.add_argument("--out", type=Path, default=None, help="Where to write the figure (default: next to --scores)")
     parser.add_argument("--top", type=int, default=8, help="How many concepts to show")
+    parser.add_argument(
+        "--pairs",
+        default="all",
+        help="Which concepts compete: all, cot (the 16 CoT concepts of the grid), or ids",
+    )
+    parser.add_argument("--label", default=None, help="Suffix for the file name; defaults to --pairs")
     parser.add_argument(
         "--title",
         default="Какие фичи активируются на правильном/неправильном CoT?",
@@ -56,6 +77,15 @@ def main() -> None:
     raw = data["mean_cosine"].astype(np.float64)
     if correct.sum() < 2 or (~correct).sum() < 2:
         raise SystemExit("Both groups need at least two traces")
+
+    # The pool is narrowed before anything is measured, so the chance level below is the one
+    # for the concepts that actually compete.
+    wanted = resolve_pairs(args.pairs)
+    if wanted is not None:
+        keep = [index for index, pair in enumerate(pair_ids) if int(pair) in wanted]
+        if len(keep) < 2:
+            raise SystemExit(f"Only {len(keep)} of the chosen concepts are in {args.scores}")
+        pair_ids, raw = pair_ids[keep], raw[:, keep]
 
     # Standardise each concept across traces, as the previous phase did before averaging.
     std = raw.std(axis=0)
@@ -104,7 +134,8 @@ def main() -> None:
     axis.set_ylim(len(order) - 0.5, -0.5)
     axis.set_xlabel(
         "Signed z-mean\n"
-        f"перестановка меток даёт разрыв до {threshold:.2f}: меньше этого — неотличимо от случайности"
+        f"перестановка меток по {len(pair_ids)} концептам даёт разрыв до {threshold:.2f}: "
+        "меньше этого — неотличимо от случайности"
     )
     axis.grid(axis="x", alpha=0.25)
     axis.spines[["top", "right", "left"]].set_visible(False)
@@ -112,7 +143,8 @@ def main() -> None:
     axis.set_title(args.title, fontsize=15, pad=16)
     axis.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), frameon=False, fontsize=10)
     figure.tight_layout()
-    path = out / "concepts-correct-vs-incorrect.png"
+    label = args.label if args.label is not None else ("" if args.pairs == "all" else args.pairs)
+    path = out / f"concepts-correct-vs-incorrect{'-' + label.replace(',', '-') if label else ''}.png"
     figure.savefig(path, dpi=160, bbox_inches="tight")
     plt.close(figure)
 

@@ -6,7 +6,7 @@
 #   sbatch cof/02_steering/slurm/traces.sh
 #   ALPHA=2 sbatch --export=ALL cof/02_steering/slurm/traces.sh
 #
-# The two CPU figures are built at the end of the same job, so the results are ready when it
+# The CPU figures are built at the end of the same job, so the results are ready when it
 # finishes. Rerunning is harmless: it overwrites its own outputs and touches nothing else.
 #
 #SBATCH --partition=rocky
@@ -39,10 +39,19 @@ uv run python cof/02_steering/cardiogram.py \
 
 # The saved file is named after the strength the way Python prints it, so 2.0 becomes a2.
 TAG=$(uv run python -c "import sys; print(format(float(sys.argv[1]), 'g'))" $ALPHA)
+SCORES=$RESULTS/concept-scores-L$LAYER-a$TAG.npz
 
+# The ranking over every concept, which is what the figure in the report showed.
 uv run python cof/02_steering/plot_concepts.py \
-  --scores $RESULTS/concept-scores-L$LAYER-a$TAG.npz \
+  --scores $SCORES \
   --vector-dir $VECTORS
+
+# The same ranking among the 16 CoT concepts alone. A smaller pool means a lower chance
+# level, so a concept can clear it here that could not clear it against all 1036.
+uv run python cof/02_steering/plot_concepts.py \
+  --scores $SCORES \
+  --vector-dir $VECTORS \
+  --pairs cot
 
 uv run python cof/02_steering/plot_tokens.py \
   --results $RESULTS \
