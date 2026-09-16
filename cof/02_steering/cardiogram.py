@@ -5,6 +5,10 @@ teacher-forced once, the residual stream is captured at the requested layers, pr
 onto a concept direction, standardised over every reasoning token, and averaged into
 equal relative-position bins. Correct and incorrect traces are averaged separately.
 
+Every concept is scored in the same pass, and the per-trace scores are saved, so the
+ranking of concepts by correct-against-incorrect separation (plot_concepts.py) needs no
+second run through the model.
+
 Runs on the saved steering.jsonl, so it needs a GPU and the model, but no regeneration.
 """
 
@@ -35,6 +39,8 @@ from concept_analysis import thinking_span  # noqa: E402
 from evaluate import MODEL_ID, instruction, load_benchmark  # noqa: E402
 
 from steer import CONCEPTS, STEERING_VERSION, vector_manifest  # noqa: E402
+
+BOOTSTRAP_SAMPLES = 2_000
 
 
 def parse_args() -> argparse.Namespace:
@@ -160,14 +166,16 @@ def trace_cosines(
     return (hidden @ directions.T).float().cpu().numpy().T
 
 
-def binned(values: np.ndarray, bins: int) -> np.ndarray:
-    """Average into equal relative-position bins; short traces repeat their nearest token."""
-    positions = np.linspace(0, len(values), bins + 1).astype(int)
-    out = np.empty(bins, dtype=float)
-    for index in range(bins):
-        low, high = positions[index], max(positions[index + 1], positions[index] + 1)
-        out[index] = values[low:high].mean()
-    return out
+def binned_all(values: np.ndarray, bins: int) -> np.ndarray:
+    """Average every concept into equal relative-position bins, shaped (pairs, bins).
+
+    Short traces repeat their nearest token, as before. With a thousand concepts a
+    per-concept loop is what costs, so every bin is reduced in one pass.
+    """
+    edges = np.linspace(0, values.shape[1], bins + 1).astype(int)
+    starts = np.minimum(edges[:-1], values.shape[1] - 1)
+    counts = np.maximum(np.diff(edges), 1)
+    return np.add.reduceat(values, starts, axis=1) / counts
 
 
 def main() -> None:
@@ -183,13 +191,22 @@ def main() -> None:
     records = load_records(args.results, args.benchmark, args.alpha)
     examples = {example["id"]: example for example in load_benchmark(args.benchmark)}
 
+    # Every concept is scored in the same pass: one wider matrix multiply per trace, and the
+    # saved scores then answer which concepts separate correct reasoning from incorrect.
+    scored = [int(value) for value in pd.read_parquet(args.vector_dir / "pairs.parquet")["pair_id"]]
+    missing = sorted(set(pairs) - set(scored))
+    if missing:
+        raise SystemExit(f"Pairs not in the vector table: {missing}")
+
     model = AutoModelForCausalLM.from_pretrained(MODEL_ID, torch_dtype=torch.float16, device_map="auto")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    directions = load_directions(args.vector_dir, args.layer, pairs, model.device)
+    directions = load_directions(args.vector_dir, args.layer, scored, model.device)
     capture = Capture(model, args.layer)
 
-    per_trace: list[tuple[bool, np.ndarray]] = []
-    pooled: list[np.ndarray] = []
+    per_trace: list[dict[str, Any]] = []
+    token_sum = np.zeros(len(scored), dtype=np.float64)
+    token_square = np.zeros(len(scored), dtype=np.float64)
+    token_count = 0
     try:
         for index, record in enumerate(records, 1):
             if args.max_tokens and record["generated_token_count"] > args.max_tokens:
@@ -211,9 +228,23 @@ def main() -> None:
             if cosines is None:
                 print(f"{index}/{len(records)} {record['key']}: no usable reasoning span, skipped", flush=True)
                 continue
-            per_trace.append((bool(record["correct"]), cosines))
-            pooled.append(cosines)
-            print(f"{index}/{len(records)} {record['key']} tokens={cosines.shape[1]} correct={record['correct']}", flush=True)
+            token_sum += cosines.sum(axis=1, dtype=np.float64)
+            token_square += np.square(cosines, dtype=np.float64).sum(axis=1)
+            token_count += cosines.shape[1]
+            per_trace.append(
+                {
+                    "id": record["id"],
+                    "correct": bool(record["correct"]),
+                    "reasoning_tokens": cosines.shape[1],
+                    # The per-trace mean is the statistic the previous phase ranked concepts by.
+                    "mean_cosine": cosines.mean(axis=1),
+                    "curve": binned_all(cosines, args.bins),
+                }
+            )
+            print(
+                f"{index}/{len(records)} {record['key']} tokens={cosines.shape[1]} correct={record['correct']}",
+                flush=True,
+            )
     finally:
         capture.close()
 
@@ -221,33 +252,54 @@ def main() -> None:
         raise SystemExit("No traces produced usable reasoning spans")
 
     # Standardise within concept and layer over every reasoning token, as in the report.
-    everything = np.concatenate(pooled, axis=1)
-    mean = everything.mean(axis=1, keepdims=True)
-    std = everything.std(axis=1, keepdims=True)
-    std[std == 0] = 1.0
+    token_mean = token_sum / token_count
+    token_std = np.sqrt(np.maximum(token_square / token_count - token_mean**2, 0.0))
+    token_std[token_std == 0] = 1.0
 
-    groups = {True: [], False: []}
-    for correct, cosines in per_trace:
-        z = (cosines - mean) / std
-        groups[correct].append(np.stack([binned(z[row], args.bins) for row in range(z.shape[0])]))
+    # Saved so that both figures can be rebuilt, on any concept, without the model.
+    scores = out / f"concept-scores-L{args.layer}-a{args.alpha:g}.npz"
+    np.savez_compressed(
+        scores,
+        pair_ids=np.asarray(scored, dtype=np.int32),
+        ids=np.asarray([item["id"] for item in per_trace]),
+        correct=np.asarray([item["correct"] for item in per_trace]),
+        reasoning_tokens=np.asarray([item["reasoning_tokens"] for item in per_trace], dtype=np.int32),
+        mean_cosine=np.stack([item["mean_cosine"] for item in per_trace]).astype(np.float32),
+        binned_cosine=np.stack([item["curve"] for item in per_trace]).astype(np.float16),
+        token_mean=token_mean.astype(np.float32),
+        token_std=token_std.astype(np.float32),
+        benchmark=args.benchmark,
+        layer=args.layer,
+        alpha=args.alpha,
+    )
+
+    rng = np.random.default_rng(20260916)
+    position = {pair: index for index, pair in enumerate(scored)}
+    groups: dict[bool, list[np.ndarray]] = {True: [], False: []}
+    for item in per_trace:
+        groups[item["correct"]].append((item["curve"] - token_mean[:, None]) / token_std[:, None])
 
     x = (np.arange(args.bins) + 0.5) * 100 / args.bins
     columns = 2 if len(pairs) > 1 else 1
     rows = (len(pairs) + columns - 1) // columns
     figure, axes = plt.subplots(rows, columns, figsize=(6.5 * columns, 3.0 * rows), squeeze=False, sharex=True)
-    for position, pair in enumerate(pairs):
-        axis = axes[position // columns][position % columns]
+    for index, pair in enumerate(pairs):
+        axis = axes[index // columns][index % columns]
         for correct, label, color in ((True, "Correct", "#3b76af"), (False, "Incorrect", "#d95f4c")):
             if not groups[correct]:
                 continue
-            stack = np.stack([item[position] for item in groups[correct]])
+            stack = np.stack([item[position[pair]] for item in groups[correct]])
             axis.plot(x, stack.mean(axis=0), label=f"{label} (n={len(stack)})", color=color, linewidth=1.6)
+            # Bootstrap over traces: without a band a wiggle cannot be told from a difference.
+            draws = stack[rng.integers(0, len(stack), size=(BOOTSTRAP_SAMPLES, len(stack)))].mean(axis=1)
+            low, high = np.quantile(draws, [0.025, 0.975], axis=0)
+            axis.fill_between(x, low, high, color=color, alpha=0.15, linewidth=0)
         axis.axhline(0, color="black", linewidth=0.8)
         axis.set_title(textwrap.fill(CONCEPTS.get(pair, str(pair)), 44), fontsize=10)
         axis.set_ylabel("Signed z-mean")
         axis.grid(alpha=0.25)
-    for position in range(len(pairs), rows * columns):
-        axes[position // columns][position % columns].remove()
+    for index in range(len(pairs), rows * columns):
+        axes[index // columns][index % columns].remove()
     for column in range(columns):
         axes[rows - 1][column].set_xlabel("Relative position within reasoning, %")
     handles, labels = axes[0][0].get_legend_handles_labels()
@@ -257,7 +309,7 @@ def main() -> None:
     path = out / f"cardiogram-L{args.layer}-a{args.alpha:g}.png"
     figure.savefig(path, dpi=160)
     plt.close(figure)
-    print(f"{len(per_trace)} traces -> {path}")
+    print(f"{len(per_trace)} traces -> {path}, {scores}")
 
 
 if __name__ == "__main__":
