@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from plot_outcomes import BENCHMARK_NAMES, load, question_key  # noqa: E402
+from plot_outcomes import benchmark_label, load, question_key  # noqa: E402
 
 TOKENS_COLOR = "#2a78d6"
 ACCURACY_COLOR = "#eb6834"
@@ -34,7 +34,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--results", type=Path, required=True, help="Directory holding steering*.jsonl")
     parser.add_argument("--out", type=Path, default=None, help="Where to write the figure (default: --results)")
-    parser.add_argument("--benchmark", default="gpqa_diamond")
+    parser.add_argument(
+        "--benchmark",
+        default="gpqa_diamond",
+        help="One benchmark, a comma-separated list to pool, or 'all'",
+    )
     parser.add_argument("--concept-pair", type=int, default=657)
     parser.add_argument(
         "--alphas",
@@ -134,7 +138,7 @@ def main() -> None:
         axis.grid(axis="y", alpha=0.25)
         axis.spines[["top", "right"]].set_visible(False)
 
-    benchmark = BENCHMARK_NAMES.get(args.benchmark, args.benchmark)
+    benchmark = benchmark_label(rows)
     both = [point["both"] for point in points]
     figure.suptitle(
         f"{name}\n"

@@ -42,7 +42,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--results", type=Path, required=True, help="Directory holding steering*.jsonl")
     parser.add_argument("--out", type=Path, default=None, help="Where to write figures (default: --results)")
-    parser.add_argument("--benchmark", default=None, help="Restrict to one benchmark")
+    parser.add_argument(
+        "--benchmark",
+        default=None,
+        help="Restrict to one or more comma-separated benchmarks; omit or use 'all' to pool all present",
+    )
     parser.add_argument(
         "--steering-version",
         type=int,
@@ -71,6 +75,22 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def benchmark_selection(value: str | None) -> tuple[str, ...] | None:
+    """Turn the CLI spelling into a benchmark filter; None means pool everything present."""
+    if value is None or value.strip().lower() == "all":
+        return None
+    selected = tuple(dict.fromkeys(item.strip() for item in value.split(",") if item.strip()))
+    if not selected:
+        raise ValueError("--benchmark must name at least one benchmark")
+    return selected
+
+
+def benchmark_label(rows: list[dict[str, Any]]) -> str:
+    """Human-readable label for a single benchmark or a pooled set."""
+    names = sorted({row["benchmark"] for row in rows})
+    return " + ".join(BENCHMARK_NAMES.get(name, name) for name in names)
+
+
 def load(results: Path, benchmark: str | None, version: int | None) -> list[dict[str, Any]]:
     everything = []
     for path in sorted(results.glob("steering*.jsonl")):
@@ -89,7 +109,11 @@ def load(results: Path, benchmark: str | None, version: int | None) -> list[dict
         raise SystemExit(f"No versioned records found under {results}")
     wanted = version if version is not None else max(known)
     records = {record["key"]: record for record in everything if record.get("steering_version") == wanted}
-    rows = [row for row in records.values() if not benchmark or row["benchmark"] == benchmark]
+    selected = benchmark_selection(benchmark)
+    rows = [
+        row for row in records.values()
+        if selected is None or row["benchmark"] in selected
+    ]
     if not rows:
         raise SystemExit(f"No steering_version {wanted} records found under {results}")
     skipped = sum(count for value, count in versions.items() if value != wanted)

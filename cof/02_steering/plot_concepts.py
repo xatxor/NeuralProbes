@@ -25,6 +25,8 @@ import pandas as pd
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
+from plot_outcomes import BENCHMARK_NAMES  # noqa: E402
+
 CORRECT_COLOR = "#2a78d6"
 INCORRECT_COLOR = "#eb6834"
 CONNECTOR_COLOR = "#d6d3cc"
@@ -66,12 +68,24 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def score_benchmark_label(data: np.lib.npyio.NpzFile) -> str:
+    """Describe the benchmark provenance stored by old or new cardiogram runs."""
+    if "benchmarks" in data:
+        names = [str(value) for value in data["benchmarks"]]
+    elif "benchmark" in data:
+        names = [item.strip() for item in str(data["benchmark"].item()).split(",") if item.strip()]
+    else:
+        return ""
+    return " + ".join(BENCHMARK_NAMES.get(name, name) for name in names)
+
+
 def main() -> None:
     args = parse_args()
     out = args.out or args.scores.parent
     out.mkdir(parents=True, exist_ok=True)
 
     data = np.load(args.scores, allow_pickle=False)
+    benchmark = score_benchmark_label(data)
     pair_ids = data["pair_ids"]
     correct = data["correct"].astype(bool)
     raw = data["mean_cosine"].astype(np.float64)
@@ -140,7 +154,8 @@ def main() -> None:
     axis.grid(axis="x", alpha=0.25)
     axis.spines[["top", "right", "left"]].set_visible(False)
     axis.tick_params(axis="y", length=0)
-    axis.set_title(args.title, fontsize=15, pad=16)
+    title = f"{args.title}\n{benchmark}" if benchmark else args.title
+    axis.set_title(title, fontsize=15, pad=16)
     axis.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), frameon=False, fontsize=10)
     figure.tight_layout()
     label = args.label if args.label is not None else ("" if args.pairs == "all" else args.pairs)

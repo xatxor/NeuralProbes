@@ -5,6 +5,9 @@
 #
 #   sbatch cof/02_steering/slurm/traces.sh
 #   ALPHA=2 sbatch --export=ALL cof/02_steering/slurm/traces.sh
+#   BENCHMARK=gpqa_diamond,math_500 TOKEN_ALPHAS=2,2.5 \
+#     OUT=cof/02_steering/results/figures/combined \
+#     sbatch --export=ALL cof/02_steering/slurm/traces.sh
 #
 # The CPU figures are built at the end of the same job, so the results are ready when it
 # finishes. Rerunning is harmless: it overwrites its own outputs and touches nothing else.
@@ -22,37 +25,50 @@ export PYTORCH_ALLOC_CONF=expandable_segments:True
 
 VECTORS=~/korznikov_students/dm/exp_gendata/work/vectors/Qwen_Qwen3-8B--assistant--semantic
 RESULTS=${RESULTS:-cof/02_steering/results}
+OUT=${OUT:-$RESULTS}
 BENCHMARK=${BENCHMARK:-gpqa_diamond}
 LAYER=${LAYER:-18}
 # Which steering condition to replay; 0 is the unsteered baseline.
 ALPHA=${ALPHA:-0}
 # Lower it if the card runs out of memory on the longest traces.
 CHUNK=${CHUNK:-1024}
+# Optional subset for the token-saving chart. This is useful for a pooled plot, where only
+# strengths present in every selected benchmark should be compared.
+TOKEN_ALPHAS=${TOKEN_ALPHAS:-}
 
 uv run python cof/02_steering/cardiogram.py \
-  --results $RESULTS \
-  --vector-dir $VECTORS \
-  --benchmark $BENCHMARK \
-  --layer $LAYER \
-  --alpha $ALPHA \
-  --chunk-tokens $CHUNK
+  --results "$RESULTS" \
+  --out "$OUT" \
+  --vector-dir "$VECTORS" \
+  --benchmark "$BENCHMARK" \
+  --layer "$LAYER" \
+  --alpha "$ALPHA" \
+  --chunk-tokens "$CHUNK"
 
 # The saved file is named after the strength the way Python prints it, so 2.0 becomes a2.
-TAG=$(uv run python -c "import sys; print(format(float(sys.argv[1]), 'g'))" $ALPHA)
-SCORES=$RESULTS/concept-scores-L$LAYER-a$TAG.npz
+TAG=$(uv run python -c "import sys; print(format(float(sys.argv[1]), 'g'))" "$ALPHA")
+SCORES=$OUT/concept-scores-L$LAYER-a$TAG.npz
 
 # The ranking over every concept, which is what the figure in the report showed.
 uv run python cof/02_steering/plot_concepts.py \
-  --scores $SCORES \
-  --vector-dir $VECTORS
+  --scores "$SCORES" \
+  --vector-dir "$VECTORS" \
+  --out "$OUT"
 
 # The same ranking among the 16 CoT concepts alone. A smaller pool means a lower chance
 # level, so a concept can clear it here that could not clear it against all 1036.
 uv run python cof/02_steering/plot_concepts.py \
-  --scores $SCORES \
-  --vector-dir $VECTORS \
+  --scores "$SCORES" \
+  --vector-dir "$VECTORS" \
+  --out "$OUT" \
   --pairs cot
 
+TOKEN_ARGS=()
+if [[ -n "$TOKEN_ALPHAS" ]]; then
+  TOKEN_ARGS+=(--alphas "$TOKEN_ALPHAS")
+fi
 uv run python cof/02_steering/plot_tokens.py \
-  --results $RESULTS \
-  --benchmark $BENCHMARK
+  --results "$RESULTS" \
+  --out "$OUT" \
+  --benchmark "$BENCHMARK" \
+  "${TOKEN_ARGS[@]}"

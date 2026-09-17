@@ -38,7 +38,8 @@ sys.path.insert(0, str(ROOT.parent.parent / "vika" / "01_eval"))
 from concept_analysis import thinking_span  # noqa: E402
 from evaluate import MODEL_ID, instruction, load_benchmark  # noqa: E402
 
-from steer import CONCEPTS, STEERING_VERSION, vector_manifest  # noqa: E402
+from plot_outcomes import BENCHMARK_NAMES, benchmark_selection  # noqa: E402
+from steer import CONCEPTS, DEFAULT_CONCEPT_PAIRS, STEERING_VERSION, benchmark_names, vector_manifest  # noqa: E402
 
 BOOTSTRAP_SAMPLES = 2_000
 
@@ -48,7 +49,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--results", type=Path, required=True, help="Directory holding steering*.jsonl")
     parser.add_argument("--vector-dir", type=Path, required=True)
     parser.add_argument("--out", type=Path, default=None, help="Where to write figures (default: --results)")
-    parser.add_argument("--benchmark", default="gpqa_diamond")
+    parser.add_argument(
+        "--benchmark",
+        default="gpqa_diamond",
+        help="One benchmark, a comma-separated list to pool, or 'all'",
+    )
     parser.add_argument("--layer", type=int, default=18)
     parser.add_argument("--concept-pairs", default=None, help="Comma-separated pair IDs; default: every CoT concept")
     parser.add_argument("--bins", type=int, default=50)
@@ -63,7 +68,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_records(results: Path, benchmark: str, alpha: float) -> list[dict[str, Any]]:
+def selected_benchmark_names(value: str) -> tuple[str, ...]:
+    selected = benchmark_selection(value)
+    return benchmark_names("all") if selected is None else selected
+
+
+def load_records(results: Path, benchmarks: tuple[str, ...], alpha: float) -> list[dict[str, Any]]:
     records: dict[str, dict[str, Any]] = {}
     for path in sorted(results.glob("steering*.jsonl")):
         with path.open(encoding="utf-8") as handle:
@@ -81,16 +91,18 @@ def load_records(results: Path, benchmark: str, alpha: float) -> list[dict[str, 
                     records[record["key"]] = record
     rows = [
         row for row in records.values()
-        if row["benchmark"] == benchmark
+        if row["benchmark"] in benchmarks
         and row["alpha"] == alpha
         and row["reasoning_status"] == "closed_thinking"
     ]
     if not rows:
-        raise SystemExit(f"No closed-thinking records at alpha={alpha} for {benchmark}")
+        raise SystemExit(
+            f"No closed-thinking records at alpha={alpha} for {','.join(benchmarks)}"
+        )
     # One trace per question: repeated baselines are deterministic, so the first is enough.
-    unique: dict[str, dict[str, Any]] = {}
+    unique: dict[tuple[str, str], dict[str, Any]] = {}
     for row in sorted(rows, key=lambda item: item["key"]):
-        unique.setdefault(row["id"], row)
+        unique.setdefault((row["benchmark"], row["id"]), row)
     return list(unique.values())
 
 
@@ -180,16 +192,21 @@ def binned_all(values: np.ndarray, bins: int) -> np.ndarray:
 
 def main() -> None:
     args = parse_args()
+    benchmarks = selected_benchmark_names(args.benchmark)
     out = args.out or args.results
     out.mkdir(parents=True, exist_ok=True)
     pairs = (
         [int(value) for value in args.concept_pairs.split(",") if value.strip()]
         if args.concept_pairs
-        else sorted(CONCEPTS)
+        else list(DEFAULT_CONCEPT_PAIRS)
     )
 
-    records = load_records(args.results, args.benchmark, args.alpha)
-    examples = {example["id"]: example for example in load_benchmark(args.benchmark)}
+    records = load_records(args.results, benchmarks, args.alpha)
+    examples = {
+        (benchmark, example["id"]): example
+        for benchmark in benchmarks
+        for example in load_benchmark(benchmark)
+    }
 
     # Every concept is scored in the same pass: one wider matrix multiply per trace, and the
     # saved scores then answer which concepts separate correct reasoning from incorrect.
@@ -212,7 +229,7 @@ def main() -> None:
             if args.max_tokens and record["generated_token_count"] > args.max_tokens:
                 print(f"{index}/{len(records)} {record['key']}: skipped, too long", flush=True)
                 continue
-            example = examples.get(record["id"])
+            example = examples.get((record["benchmark"], record["id"]))
             if example is None:
                 print(f"{index}/{len(records)} {record['key']}: question not in benchmark, skipped", flush=True)
                 continue
@@ -221,7 +238,7 @@ def main() -> None:
                 tokenizer,
                 capture,
                 record,
-                instruction(args.benchmark, example["prompt"]),
+                instruction(record["benchmark"], example["prompt"]),
                 directions,
                 args.chunk_tokens,
             )
@@ -268,7 +285,8 @@ def main() -> None:
         binned_cosine=np.stack([item["curve"] for item in per_trace]).astype(np.float16),
         token_mean=token_mean.astype(np.float32),
         token_std=token_std.astype(np.float32),
-        benchmark=args.benchmark,
+        benchmark=",".join(benchmarks),
+        benchmarks=np.asarray(benchmarks),
         layer=args.layer,
         alpha=args.alpha,
     )
@@ -304,7 +322,11 @@ def main() -> None:
         axes[rows - 1][column].set_xlabel("Relative position within reasoning, %")
     handles, labels = axes[0][0].get_legend_handles_labels()
     figure.legend(handles, labels, loc="lower center", ncol=2)
-    figure.suptitle(f"Concept activation along the reasoning trace (L{args.layer}, alpha={args.alpha:g})")
+    benchmark_label = " + ".join(BENCHMARK_NAMES.get(name, name) for name in benchmarks)
+    figure.suptitle(
+        f"Concept activation along the reasoning trace: {benchmark_label} "
+        f"(L{args.layer}, alpha={args.alpha:g})"
+    )
     figure.tight_layout(rect=(0, 0.05, 1, 0.96))
     path = out / f"cardiogram-L{args.layer}-a{args.alpha:g}.png"
     figure.savefig(path, dpi=160)

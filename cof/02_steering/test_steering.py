@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -13,6 +14,8 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import steer
+import cardiogram
+import plot_outcomes
 from steer import (
     ALPHAS,
     CONCEPTS,
@@ -196,6 +199,32 @@ def main() -> None:
         shard = Path(directory) / "steering.worker-00-of-08.jsonl"
         shard.write_text('{"key": "done"}\n{"key": "cut off mid-wri', encoding="utf-8")
         assert [record["key"] for record in steer.iter_records(shard)] == ["done"]
+
+    # Pooling benchmarks must keep questions with the same within-dataset id distinct.
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        pooled = [
+            {
+                "key": f"{benchmark}:0:baseline",
+                "benchmark": benchmark,
+                "id": "0",
+                "alpha": 0.0,
+                "correct": correct,
+                "reasoning_status": "closed_thinking",
+                "steering_version": steer.STEERING_VERSION,
+            }
+            for benchmark, correct in (("gpqa_diamond", True), ("math_500", False))
+        ]
+        (root / "steering.worker-00-of-01.jsonl").write_text(
+            "".join(json.dumps(row) + "\n" for row in pooled), encoding="utf-8"
+        )
+        selected = "gpqa_diamond,math_500"
+        loaded = plot_outcomes.load(root, selected, steer.STEERING_VERSION)
+        assert len(loaded) == 2
+        assert len({plot_outcomes.question_key(row) for row in loaded}) == 2
+        assert plot_outcomes.benchmark_label(loaded) == "GPQA Diamond + MATH-500"
+        traced = cardiogram.load_records(root, ("gpqa_diamond", "math_500"), 0.0)
+        assert len(traced) == 2
     print("steering checks passed")
 
 
