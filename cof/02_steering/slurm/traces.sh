@@ -20,8 +20,11 @@
 #SBATCH --time=04:00:00
 #SBATCH --output=traces_%j.log
 
-set -u
-cd $SLURM_SUBMIT_DIR
+set -euo pipefail
+cd "$SLURM_SUBMIT_DIR"
+
+# Fail early with a clear Slurm error if the plotting environment is incomplete.
+uv run python -c "import matplotlib, pandas, torch; print('plotting dependencies OK')"
 
 export PYTORCH_ALLOC_CONF=expandable_segments:True
 
