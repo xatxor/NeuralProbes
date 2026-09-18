@@ -8,14 +8,14 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
-import torch
 import pandas as pd
+import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import steer
 import cardiogram
 import plot_outcomes
+import steer
 from steer import (
     ALPHAS,
     CONCEPTS,
@@ -213,15 +213,25 @@ def main() -> None:
                 "reasoning_status": "closed_thinking",
                 "steering_version": steer.STEERING_VERSION,
             }
-            for benchmark, correct in (("gpqa_diamond", True), ("math_500", False))
+            for benchmark, correct in (("gpqa_diamond", True), ("math_500", None))
         ]
         (root / "steering.worker-00-of-01.jsonl").write_text(
             "".join(json.dumps(row) + "\n" for row in pooled), encoding="utf-8"
+        )
+        (root / "math-correctness.json").write_text(
+            json.dumps(
+                {
+                    "steering_version": steer.STEERING_VERSION,
+                    "scores": {"math_500:0:baseline": True},
+                }
+            ),
+            encoding="utf-8",
         )
         selected = "gpqa_diamond,math_500"
         loaded = plot_outcomes.load(root, selected, steer.STEERING_VERSION)
         assert len(loaded) == 2
         assert len({plot_outcomes.question_key(row) for row in loaded}) == 2
+        assert all(row["correct"] for row in loaded)
         assert plot_outcomes.benchmark_label(loaded) == "GPQA Diamond + MATH-500"
         traced = cardiogram.load_records(root, ("gpqa_diamond", "math_500"), 0.0)
         assert len(traced) == 2

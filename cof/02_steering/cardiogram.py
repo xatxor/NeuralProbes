@@ -15,7 +15,6 @@ Runs on the saved steering.jsonl, so it needs a GPU and the model, but no regene
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import textwrap
 from pathlib import Path
@@ -37,8 +36,7 @@ sys.path.insert(0, str(ROOT.parent.parent / "vika" / "01_eval"))
 
 from concept_analysis import thinking_span  # noqa: E402
 from evaluate import MODEL_ID, instruction, load_benchmark  # noqa: E402
-
-from plot_outcomes import BENCHMARK_NAMES, benchmark_selection  # noqa: E402
+from plot_outcomes import BENCHMARK_NAMES, benchmark_selection, load, pair_table  # noqa: E402
 from steer import CONCEPTS, DEFAULT_CONCEPT_PAIRS, STEERING_VERSION, benchmark_names, vector_manifest  # noqa: E402
 
 BOOTSTRAP_SAMPLES = 2_000
@@ -65,6 +63,11 @@ def parse_args() -> argparse.Namespace:
         default=1024,
         help="How many tokens go through the model at once. Lower it if the card still runs out.",
     )
+    parser.add_argument(
+        "--include-unfinished",
+        action="store_true",
+        help="Also replay unclosed thinking blocks and count them in the incorrect group.",
+    )
     return parser.parse_args()
 
 
@@ -73,31 +76,22 @@ def selected_benchmark_names(value: str) -> tuple[str, ...]:
     return benchmark_names("all") if selected is None else selected
 
 
-def load_records(results: Path, benchmarks: tuple[str, ...], alpha: float) -> list[dict[str, Any]]:
-    records: dict[str, dict[str, Any]] = {}
-    for path in sorted(results.glob("steering*.jsonl")):
-        with path.open(encoding="utf-8") as handle:
-            for line in handle:
-                if not line.strip():
-                    continue
-                try:
-                    record = json.loads(line)
-                except json.JSONDecodeError:
-                    # A job killed mid-write can leave a truncated last line.
-                    continue
-                # An older pilot in the same folder reuses the baseline keys, so records from
-                # other versions of steer.py are dropped before de-duplication.
-                if record.get("steering_version") == STEERING_VERSION:
-                    records[record["key"]] = record
+def load_records(
+    results: Path,
+    benchmarks: tuple[str, ...],
+    alpha: float,
+    include_unfinished: bool = False,
+) -> list[dict[str, Any]]:
+    records = load(results, ",".join(benchmarks), STEERING_VERSION)
     rows = [
-        row for row in records.values()
-        if row["benchmark"] in benchmarks
-        and row["alpha"] == alpha
-        and row["reasoning_status"] == "closed_thinking"
+        row
+        for row in records
+        if row["alpha"] == alpha
+        and (include_unfinished or row["reasoning_status"] == "closed_thinking")
     ]
     if not rows:
         raise SystemExit(
-            f"No closed-thinking records at alpha={alpha} for {','.join(benchmarks)}"
+            f"No usable records at alpha={alpha} for {','.join(benchmarks)}"
         )
     # One trace per question: repeated baselines are deterministic, so the first is enough.
     unique: dict[tuple[str, str], dict[str, Any]] = {}
@@ -155,7 +149,7 @@ def trace_cosines(
     continuation_ids = tokenizer(record["output"], add_special_tokens=False, return_tensors="pt").input_ids
     token_ids = continuation_ids[0].tolist()
     start, end, status = thinking_span(tokenizer, token_ids, len(token_ids))
-    if status != "closed_thinking" or start is None or end <= start:
+    if status not in {"closed_thinking", "unclosed_thinking"} or start is None or end <= start:
         return None
     # Nothing after the reasoning span is needed, and the answer text can run long.
     sequence = torch.cat([prompt_ids, continuation_ids[:, :end]], dim=1).to(model.device)
@@ -190,6 +184,20 @@ def binned_all(values: np.ndarray, bins: int) -> np.ndarray:
     return np.add.reduceat(values, starts, axis=1) / counts
 
 
+def bootstrap_band(stacks: list[np.ndarray], rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
+    """Bootstrap within benchmark, then give each benchmark equal weight."""
+    draws = np.empty((BOOTSTRAP_SAMPLES, stacks[0].shape[1]), dtype=np.float32)
+    batch = 100
+    for start in range(0, BOOTSTRAP_SAMPLES, batch):
+        stop = min(start + batch, BOOTSTRAP_SAMPLES)
+        batch_draws = []
+        for stack in stacks:
+            indices = rng.integers(0, len(stack), size=(stop - start, len(stack)))
+            batch_draws.append(stack[indices].mean(axis=1))
+        draws[start:stop] = np.mean(batch_draws, axis=0)
+    return tuple(np.quantile(draws, [0.025, 0.975], axis=0))
+
+
 def main() -> None:
     args = parse_args()
     benchmarks = selected_benchmark_names(args.benchmark)
@@ -201,7 +209,7 @@ def main() -> None:
         else list(DEFAULT_CONCEPT_PAIRS)
     )
 
-    records = load_records(args.results, benchmarks, args.alpha)
+    records = load_records(args.results, benchmarks, args.alpha, args.include_unfinished)
     examples = {
         (benchmark, example["id"]): example
         for benchmark in benchmarks
@@ -210,7 +218,7 @@ def main() -> None:
 
     # Every concept is scored in the same pass: one wider matrix multiply per trace, and the
     # saved scores then answer which concepts separate correct reasoning from incorrect.
-    scored = [int(value) for value in pd.read_parquet(args.vector_dir / "pairs.parquet")["pair_id"]]
+    scored = [int(value) for value in pair_table(args.vector_dir).index]
     missing = sorted(set(pairs) - set(scored))
     if missing:
         raise SystemExit(f"Pairs not in the vector table: {missing}")
@@ -224,6 +232,7 @@ def main() -> None:
     token_sum = np.zeros(len(scored), dtype=np.float64)
     token_square = np.zeros(len(scored), dtype=np.float64)
     token_count = 0
+    benchmark_moments: dict[str, dict[str, Any]] = {}
     try:
         for index, record in enumerate(records, 1):
             if args.max_tokens and record["generated_token_count"] > args.max_tokens:
@@ -248,9 +257,22 @@ def main() -> None:
             token_sum += cosines.sum(axis=1, dtype=np.float64)
             token_square += np.square(cosines, dtype=np.float64).sum(axis=1)
             token_count += cosines.shape[1]
+            moments = benchmark_moments.setdefault(
+                record["benchmark"],
+                {
+                    "sum": np.zeros(len(scored), dtype=np.float64),
+                    "square": np.zeros(len(scored), dtype=np.float64),
+                    "count": 0,
+                },
+            )
+            moments["sum"] += cosines.sum(axis=1, dtype=np.float64)
+            moments["square"] += np.square(cosines, dtype=np.float64).sum(axis=1)
+            moments["count"] += cosines.shape[1]
             per_trace.append(
                 {
                     "id": record["id"],
+                    "benchmark": record["benchmark"],
+                    "reasoning_status": record["reasoning_status"],
                     "correct": bool(record["correct"]),
                     "reasoning_tokens": cosines.shape[1],
                     # The per-trace mean is the statistic the previous phase ranked concepts by.
@@ -272,17 +294,34 @@ def main() -> None:
     token_mean = token_sum / token_count
     token_std = np.sqrt(np.maximum(token_square / token_count - token_mean**2, 0.0))
     token_std[token_std == 0] = 1.0
+    benchmark_stats: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    for name, moments in benchmark_moments.items():
+        mean = moments["sum"] / moments["count"]
+        std = np.sqrt(np.maximum(moments["square"] / moments["count"] - mean**2, 0.0))
+        std[std == 0] = 1.0
+        benchmark_stats[name] = mean, std
+    binned_z = np.stack(
+        [
+            (item["curve"] - benchmark_stats[item["benchmark"]][0][:, None])
+            / benchmark_stats[item["benchmark"]][1][:, None]
+            for item in per_trace
+        ]
+    ).astype(np.float16)
 
     # Saved so that both figures can be rebuilt, on any concept, without the model.
-    scores = out / f"concept-scores-L{args.layer}-a{args.alpha:g}.npz"
+    suffix = "-include-unfinished" if args.include_unfinished else ""
+    scores = out / f"concept-scores-L{args.layer}-a{args.alpha:g}{suffix}.npz"
     np.savez_compressed(
         scores,
         pair_ids=np.asarray(scored, dtype=np.int32),
         ids=np.asarray([item["id"] for item in per_trace]),
+        trace_benchmarks=np.asarray([item["benchmark"] for item in per_trace]),
+        reasoning_status=np.asarray([item["reasoning_status"] for item in per_trace]),
         correct=np.asarray([item["correct"] for item in per_trace]),
         reasoning_tokens=np.asarray([item["reasoning_tokens"] for item in per_trace], dtype=np.int32),
         mean_cosine=np.stack([item["mean_cosine"] for item in per_trace]).astype(np.float32),
         binned_cosine=np.stack([item["curve"] for item in per_trace]).astype(np.float16),
+        binned_z=binned_z,
         token_mean=token_mean.astype(np.float32),
         token_std=token_std.astype(np.float32),
         benchmark=",".join(benchmarks),
@@ -293,9 +332,13 @@ def main() -> None:
 
     rng = np.random.default_rng(20260916)
     position = {pair: index for index, pair in enumerate(scored)}
-    groups: dict[bool, list[np.ndarray]] = {True: [], False: []}
-    for item in per_trace:
-        groups[item["correct"]].append((item["curve"] - token_mean[:, None]) / token_std[:, None])
+    group_masks = {
+        (correct, name): np.asarray(
+            [item["correct"] == correct and item["benchmark"] == name for item in per_trace]
+        )
+        for correct in (True, False)
+        for name in benchmark_stats
+    }
 
     x = (np.arange(args.bins) + 0.5) * 100 / args.bins
     columns = 2 if len(pairs) > 1 else 1
@@ -304,13 +347,18 @@ def main() -> None:
     for index, pair in enumerate(pairs):
         axis = axes[index // columns][index % columns]
         for correct, label, color in ((True, "Correct", "#3b76af"), (False, "Incorrect", "#d95f4c")):
-            if not groups[correct]:
+            stacks = [
+                binned_z[mask, position[pair]].astype(np.float32)
+                for (candidate, _), mask in group_masks.items()
+                if candidate == correct and np.any(mask)
+            ]
+            if not stacks:
                 continue
-            stack = np.stack([item[position[pair]] for item in groups[correct]])
-            axis.plot(x, stack.mean(axis=0), label=f"{label} (n={len(stack)})", color=color, linewidth=1.6)
+            count = sum(len(stack) for stack in stacks)
+            mean = np.mean([stack.mean(axis=0) for stack in stacks], axis=0)
+            axis.plot(x, mean, label=f"{label} (n={count})", color=color, linewidth=1.6)
             # Bootstrap over traces: without a band a wiggle cannot be told from a difference.
-            draws = stack[rng.integers(0, len(stack), size=(BOOTSTRAP_SAMPLES, len(stack)))].mean(axis=1)
-            low, high = np.quantile(draws, [0.025, 0.975], axis=0)
+            low, high = bootstrap_band(stacks, rng)
             axis.fill_between(x, low, high, color=color, alpha=0.15, linewidth=0)
         axis.axhline(0, color="black", linewidth=0.8)
         axis.set_title(textwrap.fill(CONCEPTS.get(pair, str(pair)), 44), fontsize=10)
@@ -323,12 +371,14 @@ def main() -> None:
     handles, labels = axes[0][0].get_legend_handles_labels()
     figure.legend(handles, labels, loc="lower center", ncol=2)
     benchmark_label = " + ".join(BENCHMARK_NAMES.get(name, name) for name in benchmarks)
+    scope = "; including unfinished" if args.include_unfinished else "; completed reasoning only"
+    balance = "; benchmark-balanced" if len(benchmark_stats) > 1 else ""
     figure.suptitle(
         f"Concept activation along the reasoning trace: {benchmark_label} "
-        f"(L{args.layer}, alpha={args.alpha:g})"
+        f"(L{args.layer}, alpha={args.alpha:g}{scope}{balance})"
     )
     figure.tight_layout(rect=(0, 0.05, 1, 0.96))
-    path = out / f"cardiogram-L{args.layer}-a{args.alpha:g}.png"
+    path = out / f"cardiogram-L{args.layer}-a{args.alpha:g}{suffix}.png"
     figure.savefig(path, dpi=160)
     plt.close(figure)
     print(f"{len(per_trace)} traces -> {path}, {scores}")

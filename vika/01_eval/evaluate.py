@@ -16,22 +16,28 @@ from typing import Any
 
 import pandas as pd
 import torch
+from concept_analysis import (
+    DEFAULT_LAYERS,
+    DEFAULT_METHODS,
+    AnalysisWriter,
+    ConceptScorer,
+)
+from concept_analysis import (
+    LAYERS as AVAILABLE_LAYERS,
+)
+from concept_analysis import (
+    METHODS as AVAILABLE_METHODS,
+)
+from concept_analysis import (
+    VERSION as ANALYSIS_VERSION,
+)
 from datasets import load_dataset
+from math_scoring import math_equal
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     StoppingCriteria,
     StoppingCriteriaList,
-)
-
-from concept_analysis import (
-    DEFAULT_LAYERS,
-    DEFAULT_METHODS,
-    LAYERS as AVAILABLE_LAYERS,
-    METHODS as AVAILABLE_METHODS,
-    AnalysisWriter,
-    ConceptScorer,
-    VERSION as ANALYSIS_VERSION,
 )
 
 MODEL_ID = "Qwen/Qwen3-8B"
@@ -272,19 +278,6 @@ def extract_choice(text: str) -> str | None:
     if not candidates:
         candidates = re.findall(r"(?<![A-Za-z])([A-D])(?![A-Za-z])", text)
     return candidates[-1].upper() if candidates else None
-
-
-def math_equal(prediction: str, reference: str) -> bool | None:
-    try:
-        from math_verify import LatexExtractionConfig, parse, verify
-    except ImportError:
-        return None
-    try:
-        gold = parse(reference, extraction_config=[LatexExtractionConfig()])
-        pred = parse(prediction, extraction_config=[LatexExtractionConfig()])
-        return bool(verify(gold, pred))
-    except Exception:
-        return False
 
 
 def load_benchmark(name: str) -> list[dict[str, Any]]:

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import hashlib
 import json
 import textwrap
 from pathlib import Path
@@ -72,6 +73,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Also plot concepts that have not reached every question at every strength.",
     )
+    parser.add_argument(
+        "--reasoning-scope",
+        choices=("all", "closed"),
+        default="all",
+        help="Use all generations (unfinished count as failures) or condition on a closed thinking block.",
+    )
     return parser.parse_args()
 
 
@@ -108,7 +115,29 @@ def load(results: Path, benchmark: str | None, version: int | None) -> list[dict
     if not known:
         raise SystemExit(f"No versioned records found under {results}")
     wanted = version if version is not None else max(known)
-    records = {record["key"]: record for record in everything if record.get("steering_version") == wanted}
+    records = {
+        record["key"]: dict(record)
+        for record in everything
+        if record.get("steering_version") == wanted
+    }
+    overrides_path = results / "math-correctness.json"
+    applied = 0
+    if overrides_path.exists():
+        payload = json.loads(overrides_path.read_text(encoding="utf-8"))
+        if payload.get("steering_version") != wanted:
+            raise SystemExit(
+                f"{overrides_path} is for steering_version {payload.get('steering_version')}, expected {wanted}"
+            )
+        for key, value in payload.get("scores", {}).items():
+            if key not in records or records[key].get("correct") is not None:
+                continue
+            if isinstance(value, dict):
+                fingerprint = hashlib.sha256(records[key]["output"].encode("utf-8")).hexdigest()
+                if value.get("output_sha256") != fingerprint:
+                    continue
+                value = value["correct"]
+            records[key]["correct"] = bool(value)
+            applied += 1
     selected = benchmark_selection(benchmark)
     rows = [
         row for row in records.values()
@@ -116,9 +145,26 @@ def load(results: Path, benchmark: str | None, version: int | None) -> list[dict
     ]
     if not rows:
         raise SystemExit(f"No steering_version {wanted} records found under {results}")
+    missing_scores = sum(row.get("correct") is None for row in rows)
+    if missing_scores:
+        raise SystemExit(
+            f"{missing_scores} selected records have correct=null. Run rescore_math.py --results {results} first."
+        )
     skipped = sum(count for value, count in versions.items() if value != wanted)
-    print(f"steering_version {wanted}: {len(rows)} records (skipped {skipped} from other versions)")
+    corrected = f", applied {applied} MATH score overrides" if applied else ""
+    print(f"steering_version {wanted}: {len(rows)} records (skipped {skipped} from other versions{corrected})")
     return rows
+
+
+def pair_table(vector_dir: Path):
+    """Read either historical ``pair_id`` or published ``pair`` metadata."""
+    import pandas as pd
+
+    table = pd.read_parquet(vector_dir / "pairs.parquet")
+    identifier = "pair_id" if "pair_id" in table.columns else "pair"
+    if identifier not in table.columns:
+        raise ValueError(f"{vector_dir / 'pairs.parquet'} has neither pair_id nor pair")
+    return table.set_index(identifier, drop=False)
 
 
 def outcome(row: dict[str, Any]) -> str:
@@ -187,9 +233,7 @@ def strength_scale(vector_dir: Path | None, residual_norm: float, rows: list[dic
     """Per concept, the factor turning alpha into a fraction of the residual-stream norm."""
     if vector_dir is None:
         return None
-    import pandas as pd
-
-    table = pd.read_parquet(vector_dir / "pairs.parquet").set_index("pair_id")
+    table = pair_table(vector_dir)
     scale: dict[tuple[int, int], float] = {}
     for row in rows:
         key = (row["concept_pair"], row["layer"])
@@ -201,10 +245,8 @@ def strength_scale(vector_dir: Path | None, residual_norm: float, rows: list[dic
 def antagonists(vector_dir: Path | None) -> dict[int, str]:
     if vector_dir is None:
         return {}
-    import pandas as pd
-
-    table = pd.read_parquet(vector_dir / "pairs.parquet")
-    return dict(zip(table["pair_id"], table["antagonist"]))
+    table = pair_table(vector_dir)
+    return dict(zip(table.index, table["antagonist"]))
 
 
 def tidy(axis: plt.Axes) -> None:
@@ -493,6 +535,10 @@ def main() -> None:
     out = args.out or args.results
     out.mkdir(parents=True, exist_ok=True)
     rows = load(args.results, args.benchmark, args.steering_version)
+    if args.reasoning_scope == "closed":
+        rows = [row for row in rows if row["reasoning_status"] == "closed_thinking"]
+        if not rows:
+            raise SystemExit("No closed-thinking records in the selected data")
     baseline = baseline_accuracy(rows)
     if not baseline:
         raise SystemExit("No alpha=0 baseline records; accuracy deltas need them")

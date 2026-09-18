@@ -307,7 +307,11 @@ def vector_manifest(vector_dir: Path) -> dict[str, Any]:
 
 def load_deltas(concepts: list[int], layers: list[int], vector_dir: Path, device: torch.device) -> dict[tuple[int, int], torch.Tensor]:
     manifest = vector_manifest(vector_dir)
-    pairs = pd.read_parquet(vector_dir / "pairs.parquet").set_index("pair_id")
+    pairs = pd.read_parquet(vector_dir / "pairs.parquet")
+    pair_column = "pair_id" if "pair_id" in pairs.columns else "pair"
+    if pair_column not in pairs.columns:
+        raise ValueError(f"{vector_dir / 'pairs.parquet'} has neither pair_id nor pair")
+    pairs = pairs.set_index(pair_column)
     tensor = load_file(vector_dir / "diff.safetensors")["diff"]
     if tuple(tensor.shape) != (manifest["layers"], 1036, 4096):
         raise ValueError(f"Unexpected diff vector shape: {tuple(tensor.shape)}")

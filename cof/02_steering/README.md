@@ -69,6 +69,31 @@ old records automatically rather than silently reusing them. Lowering
 `--max-new-tokens` only invalidates records that would have been truncated by
 the new budget; generations that stopped on their own inside it are reused.
 
-Summaries use the three alpha-zero generations per question as the baseline;
-override them with `--baseline-repeats`. Pair `532` (`joy`, versus `sadness`)
-is the default non-CoT control vector.
+Summaries use the alpha-zero generation per question as the baseline; request
+repeats with `--baseline-repeats`. Pair `532` (`joy`, versus `sadness`) is the
+default non-CoT control vector.
+
+## Post-hoc figures and unfinished reasoning
+
+`math-verify` is a required base dependency. Historical MATH records written while it
+was absent have `correct=null`; repair them without rewriting the raw JSONL first:
+
+```bash
+uv run python cof/02_steering/rescore_math.py --results cof/02_steering/results
+```
+
+`slurm/traces.sh` then produces the cardiogram, both correct/incorrect concept
+rankings, the planning token/accuracy chart, and the steering outcome figures. It
+accepts a single benchmark or a comma-separated pool. For a separate analysis where
+unclosed thinking spans participate, use a separate output directory and opt in:
+
+```bash
+INCLUDE_UNFINISHED=1 BENCHMARK=gpqa_diamond,math_500 TOKEN_ALPHAS=2,2.5 \
+  OUT=cof/02_steering/results/figures/include-unfinished \
+  sbatch --export=ALL cof/02_steering/slurm/traces.sh
+```
+
+The unfinished activation figures require a fresh GPU replay: older NPZ archives only
+contain closed spans. The corresponding token chart uses every paired generation, so
+its apparent saving includes early termination and must be reported separately from
+the default both-correct estimate.

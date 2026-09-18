@@ -8,6 +8,8 @@
 #   BENCHMARK=gpqa_diamond,math_500 TOKEN_ALPHAS=2,2.5 \
 #     OUT=cof/02_steering/results/figures/combined \
 #     sbatch --export=ALL cof/02_steering/slurm/traces.sh
+#   INCLUDE_UNFINISHED=1 OUT=cof/02_steering/results/figures/include-unfinished \
+#     sbatch --export=ALL cof/02_steering/slurm/traces.sh
 #
 # The CPU figures are built at the end of the same job, so the results are ready when it
 # finishes. Rerunning is harmless: it overwrites its own outputs and touches nothing else.
@@ -35,6 +37,26 @@ CHUNK=${CHUNK:-1024}
 # Optional subset for the token-saving chart. This is useful for a pooled plot, where only
 # strengths present in every selected benchmark should be compared.
 TOKEN_ALPHAS=${TOKEN_ALPHAS:-}
+# Replay unclosed thinking spans too.  Their hidden states are not present in the old NPZ,
+# so switching this on necessarily performs a fresh GPU replay.
+INCLUDE_UNFINISHED=${INCLUDE_UNFINISHED:-0}
+
+if [[ "$BENCHMARK" == *math_500* ]]; then
+  # Older runs were written with correct=null when math-verify was absent.  The compact
+  # override leaves the raw JSONL untouched and is read automatically by every plotter.
+  uv run python cof/02_steering/rescore_math.py --results "$RESULTS"
+fi
+
+CARDIO_ARGS=()
+TOKEN_ARGS=()
+REASONING_SCOPE=closed
+SCORE_SUFFIX=
+if [[ "$INCLUDE_UNFINISHED" == 1 ]]; then
+  CARDIO_ARGS+=(--include-unfinished)
+  TOKEN_ARGS+=(--include-unfinished)
+  REASONING_SCOPE=all
+  SCORE_SUFFIX=-include-unfinished
+fi
 
 uv run python cof/02_steering/cardiogram.py \
   --results "$RESULTS" \
@@ -43,11 +65,12 @@ uv run python cof/02_steering/cardiogram.py \
   --benchmark "$BENCHMARK" \
   --layer "$LAYER" \
   --alpha "$ALPHA" \
-  --chunk-tokens "$CHUNK"
+  --chunk-tokens "$CHUNK" \
+  "${CARDIO_ARGS[@]}"
 
 # The saved file is named after the strength the way Python prints it, so 2.0 becomes a2.
 TAG=$(uv run python -c "import sys; print(format(float(sys.argv[1]), 'g'))" "$ALPHA")
-SCORES=$OUT/concept-scores-L$LAYER-a$TAG.npz
+SCORES=$OUT/concept-scores-L$LAYER-a$TAG$SCORE_SUFFIX.npz
 
 # The ranking over every concept, which is what the figure in the report showed.
 uv run python cof/02_steering/plot_concepts.py \
@@ -63,7 +86,6 @@ uv run python cof/02_steering/plot_concepts.py \
   --out "$OUT" \
   --pairs cot
 
-TOKEN_ARGS=()
 if [[ -n "$TOKEN_ALPHAS" ]]; then
   TOKEN_ARGS+=(--alphas "$TOKEN_ALPHAS")
 fi
@@ -72,3 +94,11 @@ uv run python cof/02_steering/plot_tokens.py \
   --out "$OUT" \
   --benchmark "$BENCHMARK" \
   "${TOKEN_ARGS[@]}"
+
+uv run python cof/02_steering/plot_outcomes.py \
+  --results "$RESULTS" \
+  --out "$OUT" \
+  --benchmark "$BENCHMARK" \
+  --vector-dir "$VECTORS" \
+  --include-partial \
+  --reasoning-scope "$REASONING_SCOPE"

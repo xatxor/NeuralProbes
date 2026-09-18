@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import textwrap
 from pathlib import Path
 
 import matplotlib
@@ -46,6 +47,12 @@ def parse_args() -> argparse.Namespace:
         help="Comma-separated strengths; default: every positive strength present",
     )
     parser.add_argument("--steering-version", type=int, default=None)
+    parser.add_argument(
+        "--include-unfinished",
+        action="store_true",
+        help="Measure token change over every paired generation, including unclosed thinking blocks. "
+        "By default it is measured only where both answers are correct.",
+    )
     return parser.parse_args()
 
 
@@ -84,12 +91,22 @@ def main() -> None:
         subset = [row for row in steered if row["alpha"] == alpha and question_key(row) in baseline]
         if not subset:
             continue
-        both = [row for row in subset if row["correct"] and baseline[question_key(row)]["correct"]]
-        if len(both) < 10:
-            print(f"alpha {alpha:+g}: only {len(both)} questions answered correctly by both, skipped")
+        token_rows = (
+            subset
+            if args.include_unfinished
+            else [row for row in subset if row["correct"] and baseline[question_key(row)]["correct"]]
+        )
+        if len(token_rows) < 10:
+            description = "paired generations" if args.include_unfinished else "questions answered correctly by both"
+            print(f"alpha {alpha:+g}: only {len(token_rows)} {description}, skipped")
             continue
         ratio = np.log(
-            np.array([row["reasoning_token_count"] / baseline[question_key(row)]["reasoning_token_count"] for row in both])
+            np.array(
+                [
+                    row["reasoning_token_count"] / baseline[question_key(row)]["reasoning_token_count"]
+                    for row in token_rows
+                ]
+            )
         )
         accuracy = np.array(
             [float(row["correct"]) - float(baseline[question_key(row)]["correct"]) for row in subset]
@@ -99,7 +116,7 @@ def main() -> None:
                 "alpha": alpha,
                 "tokens": interval(ratio, rng, log=True),
                 "accuracy": interval(100 * accuracy, rng),
-                "both": len(both),
+                "token_questions": len(token_rows),
                 "questions": len(subset),
             }
         )
@@ -139,14 +156,18 @@ def main() -> None:
         axis.spines[["top", "right"]].set_visible(False)
 
     benchmark = benchmark_label(rows)
-    both = [point["both"] for point in points]
-    figure.suptitle(
-        f"{name}\n"
-        f"{benchmark}: длина считана по {min(both)}–{max(both)} вопросам, где обе версии ответили верно; "
-        f"accuracy — по всем {points[0]['questions']}",
-        fontsize=11,
+    token_questions = [point["token_questions"] for point in points]
+    length_scope = (
+        "по всем парным генерациям, включая незавершённые"
+        if args.include_unfinished
+        else "по вопросам, где обе версии ответили верно"
     )
-    figure.tight_layout(rect=(0, 0, 1, 0.93))
+    subtitle = (
+        f"{benchmark}: длина — {length_scope} (n={min(token_questions)}–{max(token_questions)}); "
+        f"accuracy — по всем {points[0]['questions']}"
+    )
+    figure.suptitle(f"{name}\n{textwrap.fill(subtitle, 115)}", fontsize=11, y=0.94)
+    figure.tight_layout(rect=(0, 0, 1, 0.84))
     path = out / f"tokens-vs-accuracy-pair-{args.concept_pair}.png"
     figure.savefig(path, dpi=160)
     plt.close(figure)
@@ -155,7 +176,7 @@ def main() -> None:
         tokens, accuracy = point["tokens"], point["accuracy"]
         print(
             f"alpha {point['alpha']:+g}: tokens x{tokens[0]:.2f} [{tokens[1]:.2f}; {tokens[2]:.2f}] "
-            f"on {point['both']} questions, accuracy {accuracy[0]:+.1f} pp "
+            f"on {point['token_questions']} questions, accuracy {accuracy[0]:+.1f} pp "
             f"[{accuracy[1]:+.1f}; {accuracy[2]:+.1f}] on {point['questions']}"
         )
     print(f"figure -> {path}")
